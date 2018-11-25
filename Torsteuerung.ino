@@ -11,26 +11,20 @@
 #include "Torsteuerung.h"
 
 
+void initialize_FSM() {
+	IsDoorOpening			= true;		// Tor wird geöffnet; false --> schließen
+	IsCurrentOverrun		= false;	// Hardware-Strombegrenzung hat nicht angesprochen
+	IsDoorBlocked			= false;	// Tür ist nicht blockiert
+	IsButtonNeedsProcessing = false;	// keine Taste wurde betätigt, daher keine Aktion notwendig
+	IsButtonReleased		= true;		// es ist gerade keine Taste gedrückt
 
+	state = CLOSED;					// Annahme: Tor ist zu Beginn geschlossen
+}
 
 void setup() {
-  pinMode(Start_Funk,   INPUT);
-  pinMode(Start_Taste,  INPUT_PULLUP);
-  pinMode(Jumper1,      INPUT_PULLUP);
-  pinMode(Jumper2,      INPUT_PULLUP);
-  pinMode(Fb_H_Br_R_A,  INPUT);
-  pinMode(Fb_H_Br_R_Z,  INPUT);
-  pinMode(Fb_H_Br_L_A,  INPUT);
-  pinMode(Fb_H_Br_L_Z,  INPUT);
-
-  pinMode(H_Br_R_A,     OUTPUT);
-  pinMode(H_Br_R_Z,     OUTPUT);
-  pinMode(H_Br_L_A,     OUTPUT);
-  pinMode(H_Br_L_Z,     OUTPUT);
-  pinMode(Rst_I_Stopp,  OUTPUT);
-  pinMode(H_Br_En,      OUTPUT);
-  pinMode(Warnleuchte,  OUTPUT);
-  
+	state_d state;	//
+	initialize_IO();
+	initialize_FSM();
 }
 
 void loop() {
