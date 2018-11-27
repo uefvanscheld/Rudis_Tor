@@ -9,7 +9,7 @@
  * - read jumpers which configure the delays of opening and closing doors
  */
 
-#include "Torsteuerung.h"
+// #include "Torsteuerung.h"
 
 void initialize_IO() {
 	pinMode(Start_Funk,   INPUT);
@@ -35,12 +35,11 @@ void initialize_IO() {
 	pinMode(Warnleuchte,  OUTPUT);		// output for flash light
 	
 	// Initialize outputs
-	DigitalWrite(H_Br_R_En, LOW);	// stop right motor
-	DigitalWrite(H_Br_L_En, LOW);	// stop left motor
-	DigitalWrite(Rst_I_Stopp, LOW);	// disable power limiter
+	digitalWrite(H_Br_R_En, LOW);	// stop right motor
+	digitalWrite(H_Br_L_En, LOW);	// stop left motor
+	digitalWrite(Rst_I_Stopp, LOW);	// disable power limiter
 	
 }
-
 
 /*
 	this procedure reads the state of the two buttons and controls 
@@ -75,8 +74,85 @@ void get_button_state(){
 */
 char get_motor_speed() {
 	int val = 0;
-	val = AnalogRead(MotorSpeedPin);	// Wert lesen
-	return char(val>>2);	// durch 4 teilen und Byte-Wert zurückgeben
+	val = analogRead(MotorSpeedPin);	// Wert lesen
+	return (val>>2);	// durch 4 teilen und int-Wert zurückgeben
 	
 }
+// kontrolliere die Überstromschaltung
+// dazu werden Port D (D0-D7) und Port C (A0-A7) gelesen und 4 bits miteinander verglichen
+void check_is_motor_overloaded() {
+	char pd = 0;	// var für Port D
+	char pc = 0;	// var für Port C
+
+	pd = (PORTD && portD_Bitmask)>>2;	// Port D auslesen, maskieren und 
+	pc = PORTC && portC_Bitmask; 	// Port C auslesen und maskieren
+	if (pd != pc) {					// in case both are not the same ...
+		IsCurrentOverloaded = true;	// ... set overload flag
+	}
+}
+// kontrolliere die Stromstärke der Motoren anhand der Parameter-Tabelle (Array)
+// und setze das entsprechende Flag
+void check_is_motor_blocked() {
+	// Stromstärke auslesen und gegen den Grenzwert vergleichen
+	Mot_R_Current = analogRead(Strom_R);
+	Mot_L_Current = analogRead(Strom_L);
+	if ((Mot_R_Current > parameter[state].curr_limit) || (Mot_L_Current > parameter[state].curr_limit)){		
+		IsDoorBlocked = true;	// ... set blocked flag
+	}
+}
+
+ 
+/*
+ *	handle flashing the lamp
+ *	there are 2 modes of flashing:
+ *	- normal operation of doors
+ *	- alarm flashing in case of power overrun 
+ */
+
+// Signallampe ansteuern 
+void updateFlashLight(boolean light_on) {
+		if (light_on) {
+			digitalWrite(Warnleuchte, HIGH);
+		}
+		else {
+			digitalWrite(Warnleuchte, LOW);			
+		}
+}
+
+// Signallampe umschalten
+void toggleFlashLight(boolean light_on) {
+		if (light_on) {
+			digitalWrite(Warnleuchte, LOW);
+			IsFlashLightOn = false;
+			nextTimerFlashEvent = nextTimerFlashEvent + long(flash_off_duration);
+		}
+		else {
+			digitalWrite(Warnleuchte, HIGH);			
+			IsFlashLightOn = true;
+			nextTimerFlashEvent = nextTimerFlashEvent + long(flash_on_duration);
+		}
+}
+
+void initializeFlashLightNewState(char new_state) {
+	// get flash light parameters for new state
+	flash_on_duration 	= parameter[state].flash_on;
+	flash_off_duration 	= parameter[state].flash_off;
+	
+	// check if flash light is needed
+	if ((flash_on_duration == 0) || (flash_off_duration == 0)) {
+		IsFlashLightActive = false;		// Signallampe deaktivieren
+		IsFlashLightOn = false;			// Signallampe ausschalten
+		updateFlashLight(IsFlashLightOn);
+	}
+	else {
+		IsFlashLightActive = true;		// Signallampe aktivieren
+		IsFlashLightOn = true;			// Signallampe einschalten
+		updateFlashLight(IsFlashLightOn);
+		// nächsten Schaltzeitpunkt bestimmen
+		timestamp = millis();			// get current time
+		nextTimerFlashEvent = timestamp + long(flash_on_duration);
+	}
+	
+}
+
 
