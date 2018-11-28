@@ -32,7 +32,7 @@
 #define  Wl_aus       800 //Zeit Warnleuchte aus
 
 //PWM Duty Cycle
-int  V_Motoren =   0; //Geschwindigkeit der Motoren 255 = 100%
+byte  V_Motoren =   0; //Geschwindigkeit der Motoren 255 = 100%
 
 // Steuerungs-Flags
 boolean	IsDoorOpening			= true;		// Richtung der Torbewegung: true --> Tor wird geöffnet; false --> schließen
@@ -40,6 +40,7 @@ boolean	IsCurrentOverloaded		= false;	// Hardware-Strombegrenzung hat nicht ange
 boolean IsDoorBlocked			= false;	// Tür ist nicht blockiert
 boolean IsButtonNeedsProcessing = false;	// keine Taste wurde betätigt, daher keine Aktion notwendig
 boolean IsButtonReleased		= true;		// es ist gerade keine Taste gedrückt
+boolean IsMotorSpeedUpdated		= false;	// am Poti wurde eine neue Motorgeschwindigkeit eingestellt (PWM duty cycle)
  
 // possible states of the door control
 enum state_list {CLOSED, OPENING, STOPPED, CLOSING, BLOCKED, OVERLOAD, OPENED };

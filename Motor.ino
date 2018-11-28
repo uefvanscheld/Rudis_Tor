@@ -34,13 +34,12 @@ void startMotor_R(int pmw_val, boolean opening) {
 	if(opening) {			// rechtes Tor öffnen
 		digitalWrite(H_Br_R_Z, LOW);		// Motor_R (-) auf Masse legen
 		digitalWrite(H_Br_R_A, HIGH);		// Motor_R (+) auf Vcc legen
-		analogWrite(H_Br_R_En, pmw_val);	// PWM-Signal aktivieren
 	}
 	else {					// rechtes Tor schließen
 		digitalWrite(H_Br_R_A, LOW);		// Motor_R (+) auf Masse legen
 		digitalWrite(H_Br_R_Z, HIGH);		// Motor_R (-) auf Vcc legen
-		analogWrite(H_Br_R_En, pmw_val);	// PWM-Signal aktivieren		
 	}
+	analogWrite(H_Br_R_En, pmw_val);	// PWM-Signal aktivieren
 }	
 void startMotor_L(int pmw_val, boolean opening) {
 	digitalWrite(H_Br_L_En, LOW);	// stop the PWM signal to prevent
@@ -51,13 +50,19 @@ void startMotor_L(int pmw_val, boolean opening) {
 	if(opening) {			// Linkes Tor öffnen
 		digitalWrite(H_Br_L_Z, LOW);		// Motor_L (-) auf Masse legen
 		digitalWrite(H_Br_L_A, HIGH);		// Motor_L (+) auf Vcc legen
-		analogWrite(H_Br_L_En, pmw_val);	// PWM-Signal aktivieren
 	}
 	else {					// linkes Tor schließen
 		digitalWrite(H_Br_L_A, LOW);		// Motor_L (+) auf Masse legen
 		digitalWrite(H_Br_L_Z, HIGH);		// Motor_L (-) auf Vcc legen
-		analogWrite(H_Br_L_En, pmw_val);	// PWM-Signal aktivieren		
 	}
+	analogWrite(H_Br_L_En, pmw_val);	// PWM-Signal aktivieren
+}	
+
+void updateMotorSpeed(int pmw_val) {
+	// keine Änderung bzgl. Drehrichtung etc.
+	// beide Motoren erhalten die gleiche Geschwindigkeit
+	analogWrite(H_Br_R_En, pmw_val);	// PWM-Signal aktivieren
+	analogWrite(H_Br_L_En, pmw_val);	// PWM-Signal aktivieren
 }	
 
 //

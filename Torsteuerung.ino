@@ -17,6 +17,7 @@ void initialize_FSM() {
 	IsDoorBlocked			= false;	// Tür ist nicht blockiert
 	IsButtonNeedsProcessing = false;	// keine Taste wurde betätigt, daher keine Aktion notwendig
 	IsButtonReleased		= true;		// es ist gerade keine Taste gedrückt
+	IsMotorSpeedUpdated		= false;	// keine neue Motorgeschwindigkeit eingestellt
 
 	state = CLOSED;					// Annahme: Tor ist zu Beginn geschlossen
 }
@@ -60,6 +61,10 @@ void loop() {
 				execEnterStateSTOPPED();
 				IsButtonNeedsProcessing = false;	// Tastendruck wurde bearbeitet
 			}
+			else if (IsMotorSpeedUpdated) {
+				updateMotorSpeed(V_Motoren);		// PWM-Signal für Motor anpassen
+				IsMotorSpeedUpdated = false;		// Flag zurücksetzen
+			}
 		break;
 		case STOPPED:
 			if(IsButtonNeedsProcessing) {
@@ -79,6 +84,10 @@ void loop() {
 				state = STOPPED;					// neuer Status: STOPPED
 				execEnterStateSTOPPED();
 				IsButtonNeedsProcessing = false;	// Tastendruck wurde bearbeitet
+			}
+			else if (IsMotorSpeedUpdated) {
+				updateMotorSpeed(V_Motoren);		// PWM-Signal für Motor anpassen
+				IsMotorSpeedUpdated = false;		// Flag zurücksetzen
 			}
 		break;
 		case BLOCKED:
@@ -116,21 +125,23 @@ void loop() {
 	}
 	// end of main loop
     Serial.print (millis());
-    Serial.print (": st:");
+    Serial.print (";\t st:");
 	Serial.print (state);
-    Serial.print (": I-R:");
+    Serial.print (";\t PWM:");
+	Serial.print (V_Motoren);
+    Serial.print (";\t I-R:");
 	Serial.print (Mot_R_Current);
-    Serial.print (": I-L:");
+    Serial.print (";\t I-L:");
 	Serial.print (Mot_L_Current);
-    Serial.print (": F-on:");
+    Serial.print (";\t F-on:");
 	Serial.print (flash_on_duration);
-    Serial.print (": F-off:");
+    Serial.print (";\t F-off:");
 	Serial.print (flash_off_duration);
-    Serial.print (": t_next:");
+    Serial.print (";\t t_next:");
 	Serial.print (nextTimerFlashEvent);
-    Serial.print (": IsFlashLightActive:");
+    Serial.print (";\t IsFlashLightActive:");
 	Serial.print (IsFlashLightActive);
-    Serial.print (": IsFlashLightOn:");
+    Serial.print (";\t IsFlashLightOn:");
 	Serial.print (IsFlashLightOn);
     
     Serial.println ("");

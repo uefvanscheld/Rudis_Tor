@@ -72,10 +72,15 @@ void get_button_state(){
 	Potentiometer lesen, um die Geschwindigkeit der Motoren zu steuern
 	Der gelesene Wert (0-1023) muss durch 4 geteilt werden
 */
-char get_motor_speed() {
-	int val = 0;
-	val = analogRead(MotorSpeedPin);	// Wert lesen
-	return (val>>2);	// durch 4 teilen und int-Wert zurückgeben
+byte get_motor_speed() {
+	unsigned int val = 0;
+	unsigned int valpot = 0;
+	valpot = analogRead(MotorSpeedPin);	// Wert lesen, durch 4 teilen und int-Wert zurückgeben
+	val = (valpot>>2);	// Wert lesen, durch 4 teilen und int-Wert zurückgeben
+	if (val != V_Motoren) {			// prüfen, ob sich der Wert verändert hat
+		IsMotorSpeedUpdated = true;	// wenn ja, das entsprechende Flag setzen
+	}
+	return (val);	
 	
 }
 // kontrolliere die Überstromschaltung
