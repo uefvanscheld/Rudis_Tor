@@ -38,7 +38,8 @@ void loop() {
 		state = OVERLOAD;
 		execEnterStateOVERLOAD();
 	}
-	check_is_motor_blocked();			// prüfe, ob Tor blockiert ist
+	// jetzt prüfen, ob die Motoren mehr Strom ziehen als normal (--> Hindernis oder Endanschlag)
+	check_is_motor_blocked();			
 	if (IsDoorBlocked && state != BLOCKED) {		// nur einmal ausführen
 		state = BLOCKED;
 		execEnterStateBLOCKED();
@@ -127,6 +128,7 @@ void loop() {
     Serial.print (millis());
     Serial.print (";\t st:");
 	Serial.print (state);
+	debugFlags();
     Serial.print (";\t PWM:");
 	Serial.print (V_Motoren);
     Serial.print (";\t I-R:");
@@ -139,10 +141,11 @@ void loop() {
 	Serial.print (flash_off_duration);
     Serial.print (";\t t_next:");
 	Serial.print (nextTimerFlashEvent);
+/*
     Serial.print (";\t IsFlashLightActive:");
 	Serial.print (IsFlashLightActive);
     Serial.print (";\t IsFlashLightOn:");
 	Serial.print (IsFlashLightOn);
-    
+*/    
     Serial.println ("");
 }

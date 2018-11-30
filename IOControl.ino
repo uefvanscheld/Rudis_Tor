@@ -19,7 +19,7 @@ void initialize_IO() {
 	
 	// inputs to monitor the hardware based current limiter
 	pinMode(Fb_H_Br_R_A,  INPUT);		
-	pinMode(Fb_H_Br_R_Z,  INPUT);
+	pinMode(Fb_H_Br_R_Z,  OUTPUT);
 	pinMode(Fb_H_Br_L_A,  INPUT);
 	pinMode(Fb_H_Br_L_Z,  INPUT);
 
@@ -35,9 +35,9 @@ void initialize_IO() {
 	pinMode(Warnleuchte,  OUTPUT);		// output for flash light
 	
 	// Initialize outputs
-	digitalWrite(H_Br_R_En, LOW);	// stop right motor
-	digitalWrite(H_Br_L_En, LOW);	// stop left motor
-	digitalWrite(Rst_I_Stopp, LOW);	// disable power limiter
+	digitalWrite(H_Br_R_En, LOW);		// stop right motor
+	digitalWrite(H_Br_L_En, LOW);		// stop left motor
+	digitalWrite(Rst_I_Stopp, HIGH);	// disable power limiter - ATTENTION: ACTIVE-LOW
 	
 }
 
@@ -86,11 +86,20 @@ byte get_motor_speed() {
 // kontrolliere die Überstromschaltung
 // dazu werden Port D (D0-D7) und Port C (A0-A7) gelesen und 4 bits miteinander verglichen
 void check_is_motor_overloaded() {
-	char pd = 0;	// var für Port D
-	char pc = 0;	// var für Port C
+	byte pd = 0;	// var für Port D
+	byte pc = 0;	// var für Port C
 
 	pd = (PORTD && portD_Bitmask)>>2;	// Port D auslesen, maskieren und 
-	pc = PORTC && portC_Bitmask; 	// Port C auslesen und maskieren
+	pc = (PORTC && portC_Bitmask); 	// Port C auslesen und maskieren
+	Serial.print (";\t portD:");
+	Serial.print (PORTD, BIN);
+	Serial.print (";\t DDRC:");
+	Serial.print (DDRC, BIN);
+	Serial.print (";\t portC:");
+	Serial.print (PINC, BIN);
+	Serial.print (";\t Pin A0:");
+	Serial.print (digitalRead(Fb_H_Br_R_A));
+    Serial.println ("");
 	if (pd != pc) {					// in case both are not the same ...
 		IsCurrentOverloaded = true;	// ... set overload flag
 	}
@@ -101,8 +110,10 @@ void check_is_motor_blocked() {
 	// Stromstärke auslesen und gegen den Grenzwert vergleichen
 	Mot_R_Current = analogRead(Strom_R);
 	Mot_L_Current = analogRead(Strom_L);
-	if ((Mot_R_Current > parameter[state].curr_limit) || (Mot_L_Current > parameter[state].curr_limit)){		
-		IsDoorBlocked = true;	// ... set blocked flag
+	if ((Mot_R_Current > parameter[state].curr_limit) || (Mot_L_Current > parameter[state].curr_limit)){
+		if (state != BLOCKED) {		// flag nur setzen, wenn FSM nicht bereits im Status "BLOCKED" ist (sonst wird der Status nicht sauber verlassen)
+			IsDoorBlocked = true;	// ... set blocked flag
+		}
 	}
 }
 
@@ -157,7 +168,15 @@ void initializeFlashLightNewState(char new_state) {
 		timestamp = millis();			// get current time
 		nextTimerFlashEvent = timestamp + long(flash_on_duration);
 	}
-	
 }
+	
+void debugFlags() {
+	byte flagmap = 0;
+	flagmap = (IsDoorOpening) | (IsCurrentOverloaded << 1) | (IsDoorBlocked	<< 2) | (IsButtonNeedsProcessing << 3) | (IsButtonReleased << 4) | (IsMotorSpeedUpdated << 5);
+	Serial.print (";\t flags:");
+	Serial.print (flagmap, BIN);
+	Serial.print (" (Spd-BuRel-BuPr-Blo-Ovl-Op);");
+}
+
 
 

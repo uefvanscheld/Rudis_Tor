@@ -7,10 +7,10 @@
 #define  Start_Taste    7 	//Start-Impuls Funkfernbedienung activ low
 #define  Jumper1        8 	//Jumper 1 Kodierung Zeitverzögerung
 #define  Jumper2       12 	//Jumper 2 Kodierung Zeitverzögerung
-#define  Fb_H_Br_R_A   14 	//= A0 Feedback H-Brücke Rechts Auf
-#define  Fb_H_Br_R_Z   15 	//= A1 Feedback H-Brücke Rechts Zu
-#define  Fb_H_Br_L_A   16 	//= A2 Feedback H-Brücke Links Auf
-#define  Fb_H_Br_L_Z   17 	//= A3 Feedback H-Brücke Links Zu
+#define  Fb_H_Br_R_A   A0 	//= A0 Feedback H-Brücke Rechts Auf
+#define  Fb_H_Br_R_Z   A1 	//= A1 Feedback H-Brücke Rechts Zu
+#define  Fb_H_Br_L_A   A2 	//= A2 Feedback H-Brücke Links Auf
+#define  Fb_H_Br_L_Z   A3 	//= A3 Feedback H-Brücke Links Zu
 
 // Eingänge analog
 #define	 Strom_L		A5	// Strommessung Motor Links
@@ -48,10 +48,10 @@ state_list state = CLOSED;
 
 // various var for motor control
 int speed_pot = 0;			// Wert des Potentiometers, zur Einstellung der Motor-Geschwindigkeit
-int	Mot_R_Current = 0;		// Variable für die Stromstärke am Motor Rechts
-int Mot_L_Current = 0;		// Variable für die Stromstärke am Motor Links
-char portD_Bitmask = B00111100;	// nur Pins D2-D5 betrachten
-char portC_Bitmask = B00001111;	// nur Pins A0-A3 betrachten
+unsigned int	Mot_R_Current = 0;		// Variable für die Stromstärke am Motor Rechts
+unsigned int 	Mot_L_Current = 0;		// Variable für die Stromstärke am Motor Links
+byte portD_Bitmask = B00111100;	// nur Pins D2-D5 betrachten
+byte portC_Bitmask = B00001111;	// nur Pins A0-A3 betrachten
 
 // various variables for flash light control
 boolean IsFlashLightOn			= false;	// Flag für den Zustand der Signallampe

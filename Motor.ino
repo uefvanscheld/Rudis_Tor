@@ -29,8 +29,18 @@ void fastStopMotor_L() {
 /*
  *	Steuerung der Motoren
  */
+ 
+// SYNC-Impuls an den L6506-Baustein senden
+// ACHTUNG: das Signal muss activ-low sein (d.h. normal=high) 
+void sendSyncImpuls() {			
+	// reset FlipFlop (SYNC) in L6506 with short impuls (active-low)
+	digitalWrite(Rst_I_Stopp, LOW);		
+	digitalWrite(Rst_I_Stopp, HIGH);	
+}
+ 
 void startMotor_R(int pmw_val, boolean opening) {
-	digitalWrite(H_Br_R_En, LOW);	// stop the PWM signal
+	digitalWrite(H_Br_R_En, LOW);	// stop the PWM signal to prevent confusion
+	sendSyncImpuls();				// sende SYNC-Impuls
 	if(opening) {			// rechtes Tor öffnen
 		digitalWrite(H_Br_R_Z, LOW);		// Motor_R (-) auf Masse legen
 		digitalWrite(H_Br_R_A, HIGH);		// Motor_R (+) auf Vcc legen
@@ -42,11 +52,8 @@ void startMotor_R(int pmw_val, boolean opening) {
 	analogWrite(H_Br_R_En, pmw_val);	// PWM-Signal aktivieren
 }	
 void startMotor_L(int pmw_val, boolean opening) {
-	digitalWrite(H_Br_L_En, LOW);	// stop the PWM signal to prevent
-	// reset FlipFlop (SYNC) in L6506 with short impuls
-	digitalWrite(Rst_I_Stopp, HIGH);	
-	digitalWrite(Rst_I_Stopp, LOW);		
-	
+	digitalWrite(H_Br_L_En, LOW);	// stop the PWM signal to prevent confusion
+	sendSyncImpuls();				// sende SYNC-Impuls
 	if(opening) {			// Linkes Tor öffnen
 		digitalWrite(H_Br_L_Z, LOW);		// Motor_L (-) auf Masse legen
 		digitalWrite(H_Br_L_A, HIGH);		// Motor_L (+) auf Vcc legen
