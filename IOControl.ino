@@ -202,11 +202,12 @@ void initializeFlashLightNewState(char new_state) {
 }
 	
 void debugFlags() {
-	byte flagmap = 0;
-	flagmap = 128 + ((IsDoorOpening) | (IsCurrentOverloaded << 1) | (IsDoorBlocked	<< 2) | (IsButtonNeedsProcessing << 3) | (IsButtonReleased << 4) | (IsMotorSpeedUpdated << 5) | (IsDoorAtEndStop << 6));
+	unsigned int flagmap = 0;
+	flagmap = ((IsDoorOpening) | (IsCurrentOverloaded << 1) | (IsDoorBlocked << 2) | (IsDoorAtEndStop << 3) | (IsButtonNeedsProcessing << 4) | (IsButtonReleased << 5) | (IsMotorSpeedUpdated << 6) | (IsJumper1Active << 7) | (IsJumper2Active << 8)  );
+	flagmap = flagmap + (1 << 9);	// eine führende '1' ergänzen, damit die binäre Ausgabe immer die gleiche Länge hat
 	Serial.print (";\t flags:");
 	Serial.print (flagmap, BIN);
-	Serial.print (" (End-Spd-BuRel-BuPr-Blo-Ovl-Op);");
+	Serial.print (" (Jum2-Jum1-SpdUpd-ButtRel-ButtPro-EndStp-Blk-Ovl-Opng);");
 }
 
 
