@@ -91,6 +91,7 @@ void execEnterStateOVERLOAD()  {
 	fastStopMotor_L();			// stop MOTOR L
 	initializeFlashLightNewState(state);	// Warnlampe auf den neuen Status einstellen
 	IsDoorOpening = !IsDoorOpening;	// Drehrichtung der Motoren ändern
+	IsCurrentOverloaded = false;	// Fehlerflag wurde bearbeitet
 }
 
 //
@@ -120,3 +121,14 @@ void execEnterStateSTOPPED()  {
 	initializeFlashLightNewState(state);	// Warnlampe auf den neuen Status einstellen
 	IsDoorOpening = !IsDoorOpening;	// Drehrichtung der Motoren ändern
 }
+
+//
+// next lines are related to state OPENED
+//
+void execEnterStateOPENED() {
+	fastStopMotor_R();	// stop MOTOR R
+	fastStopMotor_L();	// stop MOTOR L
+	initializeFlashLightNewState(state);	// Warnlampe auf den neuen Status einstellen
+	IsDoorOpening = !IsDoorOpening;			// Drehrichtung der Motoren ändern
+}
+

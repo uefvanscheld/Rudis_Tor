@@ -38,9 +38,12 @@ byte  V_Motoren =   0; //Geschwindigkeit der Motoren 255 = 100%
 boolean	IsDoorOpening			= true;		// Richtung der Torbewegung: true --> Tor wird geöffnet; false --> schließen
 boolean	IsCurrentOverloaded		= false;	// Hardware-Strombegrenzung hat nicht angesprochen
 boolean IsDoorBlocked			= false;	// Tür ist nicht blockiert
+boolean IsDoorAtEndStop			= false;	// Tür ist nicht am Endanschlag 
 boolean IsButtonNeedsProcessing = false;	// keine Taste wurde betätigt, daher keine Aktion notwendig
 boolean IsButtonReleased		= true;		// es ist gerade keine Taste gedrückt
 boolean IsMotorSpeedUpdated		= false;	// am Poti wurde eine neue Motorgeschwindigkeit eingestellt (PWM duty cycle)
+boolean IsJumper1Active			= false;	// ist Jumper 1 gesteckt  ?
+boolean IsJumper2Active			= false;	// ist Jumper 2 gesteckt  ?
  
 // possible states of the door control
 enum state_list {CLOSED, OPENING, STOPPED, CLOSING, BLOCKED, OVERLOAD, OPENED };
@@ -80,11 +83,11 @@ typedef struct
 
 state_params parameter[7] = {
 	//	speed R (0.255)	speed L,	duration [ms],	Stromstärke	,	Flash On,	Flash off
-	{ 	128,			128, 		2000,			281,			0,			0		 	},		// #0 == CLOSED
+	{ 	128,			128, 		2000,			0,				0,			0		 	},		// #0 == CLOSED
 	{ 	255,			255, 		16000,			324,			200,		800		 	},		// #1 == OPENING
 	{ 	0,				0,	 		0,				0,				0,			0		 	},		// #2 == STOPPED
-	{ 	255,			255, 		18000,			324,			200,		800		 	},		// #3 == CLOSING
-	{ 	0,				0,	 		0,				0,				300,		300		 	},		// #4 == BLOCKED
-	{ 	0,				0,	 		0,				0,				50,			50		 	},		// #5 == OVERLOAD
-	{ 	0,				0,	 		0,				0,				0,			0		 	}		// #6 == OPENED
+	{ 	255,			255, 		18000,			281,			200,		800		 	},		// #3 == CLOSING
+	{ 	0,				0,	 		0,				0,				400,		400		 	},		// #4 == BLOCKED
+	{ 	0,				0,	 		0,				0,				100,		100		 	},		// #5 == OVERLOAD
+	{ 	0,				0,	 		0,				0,				400,		200		 	}		// #6 == OPENED
 };

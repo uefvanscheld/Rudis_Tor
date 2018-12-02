@@ -33,6 +33,7 @@ void loop() {
   // put your main code here, to run repeatedly:
 	V_Motoren = get_motor_speed();		// Gewünschte Motorgeschwindigkeit abfragen
 	get_button_state();					// Status der Tasten abfragen
+	get_jumper_status();				// Status der Jumper abfragen
 	check_is_motor_overloaded();		// prüfe, ob Überstromschaltung angesprochen hat
 	if (IsCurrentOverloaded) {
 		state = OVERLOAD;
@@ -44,10 +45,15 @@ void loop() {
 		state = BLOCKED;
 		execEnterStateBLOCKED();
 	}
-	// prüfen, ob die Signallampe akualisiert werden muss
+	// prüfen, ob der Arbeitsmodus der Signallampe akualisiert werden muss
 	if (IsFlashLightActive && (millis() >= nextTimerFlashEvent)) {
 		toggleFlashLight(IsFlashLightOn);
 	}
+
+/*
+    Serial.print ("Vor switch:");
+	debugFlags();
+*/
 	switch (state) {
 		case CLOSED:
 			if(IsButtonNeedsProcessing) {
@@ -56,8 +62,13 @@ void loop() {
 				IsButtonNeedsProcessing = false;	// Tastendruck wurde bearbeitet
 			}
 		break;
-		case OPENING:
-			if(IsButtonNeedsProcessing) {
+		case OPENING: 
+			if(IsDoorAtEndStop) {
+				state = OPENED;					// neuer Status: OPENED; Tor am Endanschlag
+				execEnterStateOPENED();
+				IsDoorAtEndStop = false;		// Fehlerflag wurde bearbeitet
+			}
+			else if(IsButtonNeedsProcessing) {
 				state = STOPPED;					// neuer Status: STOPPED
 				execEnterStateSTOPPED();
 				IsButtonNeedsProcessing = false;	// Tastendruck wurde bearbeitet
@@ -81,7 +92,12 @@ void loop() {
 			}
 		break;
 		case CLOSING:
-			if(IsButtonNeedsProcessing) {
+			if(IsDoorBlocked) {
+				state = BLOCKED;					// neuer Status: BLOCKED; Tor ist auf ein Hindernis gestossen
+				execEnterStateBLOCKED();
+				IsDoorBlocked = false;				// Fehlerflag wurde bearbeitet
+			}
+			else if(IsButtonNeedsProcessing) {
 				state = STOPPED;					// neuer Status: STOPPED
 				execEnterStateSTOPPED();
 				IsButtonNeedsProcessing = false;	// Tastendruck wurde bearbeitet
@@ -118,17 +134,24 @@ void loop() {
 			}				
 		break;
 		case OPENED:
-		
+			if(IsButtonNeedsProcessing) {
+				state = CLOSING;					// neuer Status: CLOSING
+				execEnterStateCLOSING();
+				IsButtonNeedsProcessing = false;	// Tastendruck wurde bearbeitet
+			}		
 		break;
 		default:
 		
 		break;
 	}
 	// end of main loop
-    Serial.print (millis());
+    
+	Serial.print (millis());
     Serial.print (";\t st:");
 	Serial.print (state);
+	
 	debugFlags();
+/*
     Serial.print (";\t PWM:");
 	Serial.print (V_Motoren);
     Serial.print (";\t I-R:");
@@ -141,11 +164,12 @@ void loop() {
 	Serial.print (flash_off_duration);
     Serial.print (";\t t_next:");
 	Serial.print (nextTimerFlashEvent);
-/*
+
     Serial.print (";\t IsFlashLightActive:");
 	Serial.print (IsFlashLightActive);
     Serial.print (";\t IsFlashLightOn:");
 	Serial.print (IsFlashLightOn);
-*/    
+ */   
     Serial.println ("");
+
 }

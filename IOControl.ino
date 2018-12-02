@@ -19,7 +19,7 @@ void initialize_IO() {
 	
 	// inputs to monitor the hardware based current limiter
 	pinMode(Fb_H_Br_R_A,  INPUT);		
-	pinMode(Fb_H_Br_R_Z,  OUTPUT);
+	pinMode(Fb_H_Br_R_Z,  INPUT);
 	pinMode(Fb_H_Br_L_A,  INPUT);
 	pinMode(Fb_H_Br_L_Z,  INPUT);
 
@@ -83,23 +83,45 @@ byte get_motor_speed() {
 	return (val);	
 	
 }
+
+/*
+	Status der Jumper auslesen und die entsprechenden Flags setzen
+*/
+byte get_jumper_status() {
+	if (digitalRead(Jumper1) == LOW) {		// prüfen, ob der Jumper gesteckt ist 
+		IsJumper1Active = true;				// wenn ja, das entsprechende Flag setzen
+	}
+	else IsJumper1Active = false;			// ... ansonsten löschen
+
+	if (digitalRead(Jumper2) == LOW) {		// prüfen, ob der Jumper gesteckt ist 
+		IsJumper2Active = true;				// wenn ja, das entsprechende Flag setzen
+	}
+	else IsJumper2Active = false;			// ... ansonsten löschen
+	
+}
+
 // kontrolliere die Überstromschaltung
 // dazu werden Port D (D0-D7) und Port C (A0-A7) gelesen und 4 bits miteinander verglichen
 void check_is_motor_overloaded() {
 	byte pd = 0;	// var für Port D
 	byte pc = 0;	// var für Port C
-
-	pd = (PORTD && portD_Bitmask)>>2;	// Port D auslesen, maskieren und 
-	pc = (PORTC && portC_Bitmask); 	// Port C auslesen und maskieren
+/*
 	Serial.print (";\t portD:");
 	Serial.print (PORTD, BIN);
 	Serial.print (";\t DDRC:");
 	Serial.print (DDRC, BIN);
 	Serial.print (";\t portC:");
 	Serial.print (PINC, BIN);
-	Serial.print (";\t Pin A0:");
-	Serial.print (digitalRead(Fb_H_Br_R_A));
+*/
+	pd = (PORTD & portD_Bitmask)>>2;	// Port D auslesen, maskieren und 
+	pc = (PINC & portC_Bitmask); 	// Port C auslesen und maskieren
+/*
+	Serial.print (";\t pd:");
+	Serial.print (pd, BIN);
+	Serial.print (";\t pc:");
+	Serial.print (pc, BIN);
     Serial.println ("");
+*/
 	if (pd != pc) {					// in case both are not the same ...
 		IsCurrentOverloaded = true;	// ... set overload flag
 	}
@@ -111,9 +133,18 @@ void check_is_motor_blocked() {
 	Mot_R_Current = analogRead(Strom_R);
 	Mot_L_Current = analogRead(Strom_L);
 	if ((Mot_R_Current > parameter[state].curr_limit) || (Mot_L_Current > parameter[state].curr_limit)){
+		// die Strommessung hat nur Auswirkungen, wenn die entsprechenden Jumper gesteckt sind !!
+		if ((state == OPENING) && IsJumper1Active)	{	// wenn das Tor gerade öffnet, dann bedeutet der zu hohe Strom: ---> Tor ist am Endanschlag
+			IsDoorAtEndStop = true;
+		}
+		else if ((state == CLOSING) && IsJumper2Active)	{	// wenn das Tor gerade schließt, dann bedeutet der zu hohe Strom: ---> Tor ist auf ein Hindernis gestossen
+			IsDoorBlocked = true;
+		}
+		/*
 		if (state != BLOCKED) {		// flag nur setzen, wenn FSM nicht bereits im Status "BLOCKED" ist (sonst wird der Status nicht sauber verlassen)
 			IsDoorBlocked = true;	// ... set blocked flag
 		}
+		*/
 	}
 }
 
@@ -172,10 +203,10 @@ void initializeFlashLightNewState(char new_state) {
 	
 void debugFlags() {
 	byte flagmap = 0;
-	flagmap = (IsDoorOpening) | (IsCurrentOverloaded << 1) | (IsDoorBlocked	<< 2) | (IsButtonNeedsProcessing << 3) | (IsButtonReleased << 4) | (IsMotorSpeedUpdated << 5);
+	flagmap = 128 + ((IsDoorOpening) | (IsCurrentOverloaded << 1) | (IsDoorBlocked	<< 2) | (IsButtonNeedsProcessing << 3) | (IsButtonReleased << 4) | (IsMotorSpeedUpdated << 5) | (IsDoorAtEndStop << 6));
 	Serial.print (";\t flags:");
 	Serial.print (flagmap, BIN);
-	Serial.print (" (Spd-BuRel-BuPr-Blo-Ovl-Op);");
+	Serial.print (" (End-Spd-BuRel-BuPr-Blo-Ovl-Op);");
 }
 
 
