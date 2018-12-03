@@ -149,6 +149,7 @@ void loop() {
 	Serial.print (millis());
     Serial.print (";\t st:");
 	Serial.print (state);
+/*
     Serial.print (";\t PWM:");
 	Serial.print (V_Motoren);
     Serial.print (";\t I-R:");
@@ -161,13 +162,14 @@ void loop() {
 	Serial.print (flash_off_duration);
     Serial.print (";\t t_next:");
 	Serial.print (nextTimerFlashEvent);
-/*
+
     Serial.print (";\t IsFlashLightActive:");
 	Serial.print (IsFlashLightActive);
     Serial.print (";\t IsFlashLightOn:");
 	Serial.print (IsFlashLightOn);
- */   
+
 	debugFlags();
+ */   
 
     Serial.println ("");
 
