@@ -27,9 +27,6 @@
 #define  H_Br_L_En      9 	//H-Brücke Motor Links Enable
 #define  Warnleuchte    13 	//Warnleuchte an
 
-// Timing für Warnleuchte
-#define  Wl_an        200 //Zeit Warnleuchte an
-#define  Wl_aus       800 //Zeit Warnleuchte aus
 
 //PWM Duty Cycle
 byte  V_Motoren =   0; //Geschwindigkeit der Motoren 255 = 100%
@@ -39,11 +36,19 @@ boolean	IsDoorOpening			= true;		// Richtung der Torbewegung: true --> Tor wird 
 boolean	IsCurrentOverloaded		= false;	// Hardware-Strombegrenzung hat nicht angesprochen
 boolean IsDoorBlocked			= false;	// Tür ist nicht blockiert
 boolean IsDoorAtEndStop			= false;	// Tür ist nicht am Endanschlag 
-boolean IsButtonNeedsProcessing = false;	// keine Taste wurde betätigt, daher keine Aktion notwendig
-boolean IsButtonReleased		= true;		// es ist gerade keine Taste gedrückt
 boolean IsMotorSpeedUpdated		= false;	// am Poti wurde eine neue Motorgeschwindigkeit eingestellt (PWM duty cycle)
 boolean IsJumper1Active			= false;	// ist Jumper 1 gesteckt  ?
 boolean IsJumper2Active			= false;	// ist Jumper 2 gesteckt  ?
+
+// Variablen für Tastensteuerung inkl. lange und kurzer Tastdrücke
+boolean IsButtonReleased		= true;		// Indikator für: es ist gerade keine Taste gedrückt
+boolean	IsBottonPressed			= false;	// Indikator für: eine Taste wird gerade gedrückt
+boolean IsButtonNeedsProcessing = false;	// Indikator für: eine Taste wurde betätigt, daher ist eine Aktion erforderlich
+boolean	BottonWasPressedShort	= false;	// Indikator für: es war ein kurzer Tastendruck
+boolean	BottonWasPressedLong	= false;	// Indikator für: es war ein langer Tastendruck	
+unsigned long	tsButtonWasPressed;					// Zeitpunkt in [msec], wann die Taste herunter gedrueckt wurde
+unsigned int	ButtonLongPressDuration	= 3000;		// Zeit in [msec], die eine Taste gedrückt werden muss, damit ein langer Tasetndruck erkannt wird 
+
  
 // possible states of the door control
 enum state_list {CLOSED, OPENING, STOPPED, CLOSING, BLOCKED, OVERLOAD, OPENED };
