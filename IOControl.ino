@@ -45,25 +45,38 @@ void initialize_IO() {
 	this procedure reads the state of the two buttons and controls 
 	the variables which are responsible for indicating a pressed
 	or released button to the FSM
+	Neu mit V0.96: lange und kurze Tastendrücke unterscheiden
 */
 void get_button_state(){
   int val_push_button = 0;
   int val_RC_button = 0;
+  boolean isOneButtonPressed = false;	// Flag, dass eine oder beide Tasten gerade gedrückt sind 
   
   // check state of both buttons
   val_push_button = digitalRead(Start_Taste);  // read the PCB button input (active low)
   val_RC_button = digitalRead(Start_Funk);     // read the remote control input (active high)
+  isOneButtonPressed = ((!digitalRead(Start_Taste)) | digitalRead(Start_Funk));		// Auswertung, ob eine der beiden Tasten gedrückt ist
   
-  // if one of the buttons is pressed launch an action
-  if ((val_push_button == LOW || val_RC_button == HIGH) && IsButtonReleased == true && IsButtonNeedsProcessing == false){
-    IsButtonNeedsProcessing = true;
-    // IsButtonPressed = true;
-    IsButtonReleased = false;
+  // Wenn eine der beiden Tasten NEU (IsButtonReleased == true) gedrückt wurde
+  // if ((val_push_button == LOW || val_RC_button == HIGH) && IsButtonReleased == true && IsButtonNeedsProcessing == false){
+  if (isOneButtonPressed && IsButtonReleased == true && IsButtonNeedsProcessing == false){
+	tsButtonWasPressed = millis();		// Zeit merken, wann die Taste gedrückt wurde
+	IsButtonReleased = false;			// vermerken, dass die Taste jetzt als gedrückt registriert ist
+	// Klassifizierung des letzten Tastendrucks zur Vorbereitung auf den Neuen löschen
+	BottonWasPressedShort = false;		
+	BottonWasPressedLong = false;		
   }
-  // BOTH buttons need to be released before a new command can be launched 
-  else if ((val_push_button == HIGH && val_RC_button == LOW) && IsButtonReleased == false) {
-    // IsButtonPressed = false;
-    IsButtonReleased = true;
+  // Wenn am Ende eines Tastendrucks (IsButtonReleased == false) keine der beide Tasten mehr gedrückt ist ...
+  // ... prüfen, ob es ein kurzer oder langer Tastendruck war und eine Aktion auslösen lassen
+  else if (!isOneButtonPressed && IsButtonReleased == false) {		// Tastendruck ist zu Ende
+	if ((millis() - tsButtonWasPressed) >= ButtonLongPressDuration) {		// war die Taste lange gedrückt ??
+		BottonWasPressedLong = true;	// ja, es war ein langer Tastendruck
+	}
+	else {
+		BottonWasPressedShort = true;	// nein, es war ein kurzer Tastendruck
+	}
+	IsButtonReleased = true;		// Ende des aktiven Tastendruck merken
+	IsButtonNeedsProcessing = true;	// vermerken, dass nun eine Aktion zu erfolgen hat
   }
   // otherwise do nothing
 }
