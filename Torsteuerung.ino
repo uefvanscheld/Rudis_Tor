@@ -1,3 +1,16 @@
+/*
+ ************************************************
+ *
+ *	Neu in Version 0.95
+ *	- Erkennung von langen Tastendrücken (Issue #17)
+ *	- 
+ *
+ *
+ *
+ *
+ *
+ ************************************************
+ */
 //Steuerung zum Öffenen und Schließen eines Zweiflügeligen Tores mit zwei Motoren
 //  je eine H-Brücke pro Motor, Geschwindigkeit per PWM wählbar
 //Zeitverzörgertes Starten der beiden Flügel, weil sich die Tore überlappen
@@ -24,8 +37,8 @@ void initialize_FSM() {
 
 void setup() {
 	Serial.begin(115200);
-	initialize_IO();
-	initialize_FSM();
+	initialize_IO();		// alle Ein- und Ausgänge in einen definierten Zustand bringen
+	initialize_FSM();		// den Status der Steuerung in einen definierten Status (=Geschlossen) bringen
 	
 }
 
@@ -80,6 +93,8 @@ void loop() {
 		break;
 		case STOPPED:
 			if(IsButtonNeedsProcessing) {
+				if (BottonWasPressedLong) 
+					IsDoorOpening = !IsDoorOpening;			// Drehrichtung der Motoren DOCH NICHT ändern
 				if(IsDoorOpening) {
 					state = OPENING;					// neuer Status: OPENING
 					execEnterStateOPENING();
@@ -149,6 +164,7 @@ void loop() {
 	Serial.print (millis());
     Serial.print (";\t st:");
 	Serial.print (state);
+/*
     Serial.print (";\t PWM:");
 	Serial.print (V_Motoren);
     Serial.print (";\t I-R:");
@@ -161,13 +177,14 @@ void loop() {
 	Serial.print (flash_off_duration);
     Serial.print (";\t t_next:");
 	Serial.print (nextTimerFlashEvent);
-/*
+
     Serial.print (";\t IsFlashLightActive:");
 	Serial.print (IsFlashLightActive);
     Serial.print (";\t IsFlashLightOn:");
 	Serial.print (IsFlashLightOn);
- */   
+
 	debugFlags();
+ */   
 
     Serial.println ("");
 
