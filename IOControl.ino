@@ -209,7 +209,6 @@ void initializeFlashLightNewState(char new_state) {
 		IsFlashLightOn = true;			// Signallampe einschalten
 		updateFlashLight(IsFlashLightOn);
 		// nächsten Schaltzeitpunkt bestimmen
-		timestamp = millis();			// get current time
 		nextTimerFlashEvent = timestamp + long(flash_on_duration);
 	}
 }

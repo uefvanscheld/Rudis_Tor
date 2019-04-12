@@ -1,5 +1,11 @@
 /*
  * Here we define all constants and variables used in this program
+ *
+ *	V0.96: struktur state_params erweitert um folgende Parameter für's Bremsen und Beschleunigen, getrennt für jeden Motor:
+ *			- Zielgeschwindigkeit in duty cycle [0..255; byte]
+ *			- Zeitdauer [ms; integer] nach der die Geschwindigkeit jeweils wieder um eine Stufe erhöht/verringert wird
+ *			- Wert des duty cycles [byte], um den die Geschwindigkeit jeweils verändert wird (+/-) 			
+ * 
  */
  
 //Eingänge digital
@@ -28,9 +34,6 @@
 #define  Warnleuchte    13 	//Warnleuchte an
 
 
-//PWM Duty Cycle
-byte  V_Motoren =   0; //Geschwindigkeit der Motoren 255 = 100%
-
 // Steuerungs-Flags
 boolean	IsDoorOpening			= true;		// Richtung der Torbewegung: true --> Tor wird geöffnet; false --> schließen
 boolean	IsCurrentOverloaded		= false;	// Hardware-Strombegrenzung hat nicht angesprochen
@@ -49,17 +52,13 @@ boolean	BottonWasPressedLong	= false;	// Indikator für: es war ein langer Taste
 unsigned long	tsButtonWasPressed;					// Zeitpunkt in [msec], wann die Taste herunter gedrueckt wurde
 unsigned int	ButtonLongPressDuration	= 3000;		// Zeit in [msec], die eine Taste gedrückt werden muss, damit ein langer Tasetndruck erkannt wird 
 
- 
-// possible states of the door control
-enum state_list {CLOSED, OPENING, STOPPED, CLOSING, BLOCKED, OVERLOAD, OPENED };
-state_list state = CLOSED;
 
 // various var for motor control
-int speed_pot = 0;			// Wert des Potentiometers, zur Einstellung der Motor-Geschwindigkeit
-unsigned int	Mot_R_Current = 0;		// Variable für die Stromstärke am Motor Rechts
-unsigned int 	Mot_L_Current = 0;		// Variable für die Stromstärke am Motor Links
-byte portD_Bitmask = B00111100;	// nur Pins D2-D5 betrachten
-byte portC_Bitmask = B00001111;	// nur Pins A0-A3 betrachten
+int speed_pot = 0;					// Wert des Potentiometers, zur Einstellung der Motor-Geschwindigkeit
+unsigned int	Mot_R_Current = 0;	// Variable für die Stromstärke am Motor Rechts
+unsigned int 	Mot_L_Current = 0;	// Variable für die Stromstärke am Motor Links
+byte portD_Bitmask = B00111100;		// nur Pins D2-D5 betrachten
+byte portC_Bitmask = B00001111;		// nur Pins A0-A3 betrachten
 
 // various variables for flash light control
 boolean IsFlashLightOn			= false;	// Flag für den Zustand der Signallampe
@@ -68,31 +67,69 @@ unsigned int flash_on_duration;				// Einschaltdauer der Signallampe im aktuelle
 unsigned int flash_off_duration;			// Ausschaltdauer der Signallampe im aktuellen Status [ms]
 
 // define variables for controlling timer events
-unsigned long	nextTimerFlashEvent;	// Variable, die den Zeitpunkt für das nächste Schalten der Signallampe enthält
-unsigned long	nextTimerMotorEvent;	// Variable, die den Zeitpunkt für das nächste Schalten der Motoren enthält
-unsigned long	timestamp;				// Variable, die den aktuellen Zeitpunkt für weitere Berechnung zwischenspeichert
+unsigned long	nextTimerFlashEvent;		// Variable, die den Zeitpunkt für das nächste Schalten der Signallampe enthält
+unsigned long	nextTimer_Motor_R_Event;	// Variable, die den Zeitpunkt für das nächste Schalten der Motoren enthält
+unsigned long	nextTimer_Motor_L_Event;	// Variable, die den Zeitpunkt für das nächste Schalten der Motoren enthält
+unsigned long	timestamp;					// Variable, die den aktuellen Zeitpunkt für weitere Berechnung zwischenspeichert
 
+//PWM Duty Cycle and motor control variables
+byte  V_Motoren =   0; 					//Geschwindigkeit der Motoren 255 = 100% ---> überflüssig, wenn Beschleunigungsfunktion fertig implementiert ist
+byte  PWM_Motor_R =   0; 				//Geschwindigkeit des rechten Motors, Initialisierung auf 0 (Motor aus); 255 = 100%
+byte  PWM_Motor_L =   0; 				//Geschwindigkeit des linken Motors, Initialisierung auf 0 (Motor aus); 255 = 100%
+boolean IsMotor_R_Ramping = false;		// Flag, das anzeigt, ob sich der Motor gerade in einer Beschleunigungs- bzw. Bremsphase befindet
+boolean IsMotor_L_Ramping = false;		// Flag, das anzeigt, ob sich der Motor gerade in einer Beschleunigungs- bzw. Bremsphase befindet
+boolean IsMotor_R_SpeedingUp = false;	// Flag, das anzeigt, ob der Motor gerade beschleunigt (=true) oder abbremst (=false)
+boolean IsMotor_L_SpeedingUp = false;	// Flag, das anzeigt, ob der Motor gerade beschleunigt (=true) oder abbremst (=false)
+ 
+// possible states of the door control and their numeric equivalent
+enum state_list {	CLOSED, 	// 0
+					OPENING,	// 1
+					STOPPED,	// 2
+					CLOSING,	// 3
+					BLOCKED,	// 4
+					OVERLOAD,	// 5
+					OPENED		// 6
+				};
+
+// create instance and initialize				
+state_list state = CLOSED;
 
 // define parameters for the different states 
 typedef struct
  {
-    int M_R_spd;				// Geschwindigkeit für den rechten Motor (0...255)
-    int M_L_spd;				// Geschwindigkeit für den linken Motor (0...255)
-    unsigned long duration;		// [ms]; wie lange soll der Status erhalten bleiben; 0, wenn keine Zeitbegrenzung erforderlich
-	int curr_limit;				// (0...1024) Stromstärke, bei der der Status beendet werden soll; 0, wenn nicht relevant
-								// Hindernis: 	1,3A --> 281
-								// Endanschlag:	1,5A --> 324
-	unsigned int flash_on;		// [ms]; Dauer, wie lange die Warnlampe in diesem Betriebsmodus eingeschaltet sein soll
-	unsigned int flash_off;		// [ms]; Dauer, wie lange die Warnlampe ausgeschaltet sein soll
- }  state_params;
+	byte Motor_R_Speed_Target;				// Zielwert für den duty cycle des rechten Motors in diesem Status; muss int sein für analogWrite() !!
+	byte Motor_L_Speed_Target;				// Zielwert für den duty cycle des linken Motors in diesem Status; muss int sein für analogWrite() !!
+
+    unsigned long duration;					// [ms]; wie lange soll der Status erhalten bleiben; 0, wenn keine Zeitbegrenzung erforderlich
+	int curr_limit;							// (0...1024) Stromstärke, bei der der Status beendet werden soll; 0, wenn nicht relevant
+											// Hindernis: 	1,3A --> 281
+											// Endanschlag:	1,5A --> 324
+	unsigned int flash_on;					// [ms]; Dauer, wie lange die Warnlampe in diesem Betriebsmodus eingeschaltet sein soll
+	unsigned int flash_off;					// [ms]; Dauer, wie lange die Warnlampe ausgeschaltet sein soll
+
+		// bei den nächsten 4 Werten ist darauf zu achten, dass die erforderliche Zeit bis zum Erreichen der Zielgeschwindigkeit 
+		// (=(Vziel - Vaktuell)*Speed_Interval/Speed_Step) kleiner ist, als die geplante Dauer des Zustand (duration)
+		// anderenfalls erreichen die Motoren nicht ihre Zielgeschwindigkeit und bewegen sich ...
+		// u.U. mit einer falschen Geschwindigkeit durch den nächsten Status (z.B. nach der Anfangs-Beschleunigung beim Öffnen)
+		// oder haben einen sprunghaften Übergang bei der Geschwindigkeit
+	unsigned int Motor_R_Speed_Interval;	// [ms]; Dauer bis zur nächsten Geschwindigkeitsänderung beim Beschleunigen
+	unsigned int Motor_L_Speed_Interval;	// [ms]; Dauer bis zur nächsten Geschwindigkeitsänderung beim Beschleunigen
+		// bei den nächsten beiden Werten: 0 bedeutet: kein Beschleunigen oder Bremsen, d.h. die Veränderung der Geschwindigkeit ist deaktiviert
+		// In diesem Fall übernehmen die Tore die Geschwindigkeit des vorhergehenden Zustand und bewegen sich damit weiter, falls keine anderen Parameter dies verhindern
+	byte Motor_R_Speed_Step;				// Wert, um den sich das PWM-Signal jedesmal verändert; immer positiv
+	byte Motor_L_Speed_Step;				// Wert, um den sich das PWM-Signal jedesmal verändert; immer positiv
+	
+}  state_params;
 
 state_params parameter[7] = {
-	//	speed R (0.255)	speed L,	duration [ms],	Stromstärke	,	Flash On,	Flash off
-	{ 	128,			128, 		2000,			0,				0,			0		 	},		// #0 == CLOSED
-	{ 	255,			255, 		16000,			324,			200,		800		 	},		// #1 == OPENING
-	{ 	0,				0,	 		0,				0,				0,			0		 	},		// #2 == STOPPED
-	{ 	255,			255, 		18000,			281,			200,		800		 	},		// #3 == CLOSING
-	{ 	0,				0,	 		0,				0,				400,		400		 	},		// #4 == BLOCKED
-	{ 	0,				0,	 		0,				0,				100,		100		 	},		// #5 == OVERLOAD
-	{ 	0,				0,	 		0,				0,				400,		200		 	}		// #6 == OPENED
+	// Target	|Target		|Status,|Blockier-	|Flash,	|Flash	|Speed	|Speed	|Speed	|Speed	
+	// Speed R,	|Speed L,	|Dauer,	|strom-		| On 	| Off	|IntVal |IntVal |Step   |Step
+	// (0.255),	|(0.255),	|[ms] ,	|stärke,	| [ms],	| [ms],	| Re    | Li    | Re    | Li
+	{ 	0,		0,	 		0,		0,			0,		0,		100,	100,	0,		0,		 		},		// #0 == CLOSED
+	{ 	255,	90, 		16000,	324,		200,	800,	300,	300,	10,		10,			 	},		// #1 == OPENING
+	{ 	0,		0,	 		0,		0,			0,		0,		100,	100,	0,		0,			 	},		// #2 == STOPPED
+	{ 	255,	255, 		18000,	281,		200,	800,	100,	100,	10,		10,			 	},		// #3 == CLOSING
+	{ 	0,		0,	 		0,		0,			400,	400,	100,	100,	0,		0,		 		},		// #4 == BLOCKED
+	{ 	0,		0,	 		0,		0,			100,	100,	100,	100,	0,		0,			 	},		// #5 == OVERLOAD
+	{ 	0,		0,	 		0,		0,			400,	200,	100,	100,	0,		0			 	}		// #6 == OPENED
 };
