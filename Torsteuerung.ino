@@ -5,11 +5,11 @@
  *	- Funktion (#22) zum Beschleunigen und Abbremsen der Tore eingebaut (getrennt für jedes Tor)
 	  Es wird für jeden Status ein Zielgeschwindigkeit (PWM duty cycle) festgelegt,
 	  die dann ausgehend von der vorgefundenen Geschwindigkeit angesteuert wird
+ *	- funktioniert soweit
  *	-
  *	-
- *	-
- *	-
- *
+ *	- Das ist ein Testeintrag
+ *Und noch ein Eintrag
  *
  *
  *
@@ -32,6 +32,7 @@
 
 #include <Arduino.h>
 #include "Torsteuerung.h"
+#include "IOControl.ino"
 
 void initialize_FSM();
 
