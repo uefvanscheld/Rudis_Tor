@@ -5,20 +5,31 @@
  * - remote control button
  * - 2 jumpers configuring the delays during opening and closing the doors
  * - flashing the signal light (normal operation & error condition)
- * - read the potentiometer for test purposes 
+ * - read the potentiometer for test purposes
  * - read jumpers which configure the delays of opening and closing doors
  */
 
 // #include "Torsteuerung.h"
+#include <Arduino.h>
+
+void get_button_state();
+byte get_motor_speed();
+byte get_jumper_status();
+void check_is_motor_overloaded();
+void check_is_motor_blocked();
+void updateFlashLight(boolean light_on);
+void toggleFlashLight(boolean light_on);
+void initializeFlashLightNewState(char new_state);
+void debugFlags();
 
 void initialize_IO() {
 	pinMode(Start_Funk,   INPUT);
 	pinMode(Start_Taste,  INPUT_PULLUP);
 	pinMode(Jumper1,      INPUT_PULLUP);
 	pinMode(Jumper2,      INPUT_PULLUP);
-	
+
 	// inputs to monitor the hardware based current limiter
-	pinMode(Fb_H_Br_R_A,  INPUT);		
+	pinMode(Fb_H_Br_R_A,  INPUT);
 	pinMode(Fb_H_Br_R_Z,  INPUT);
 	pinMode(Fb_H_Br_L_A,  INPUT);
 	pinMode(Fb_H_Br_L_Z,  INPUT);
@@ -28,21 +39,21 @@ void initialize_IO() {
 	pinMode(H_Br_R_Z,     OUTPUT);
 	pinMode(H_Br_L_A,     OUTPUT);
 	pinMode(H_Br_L_Z,     OUTPUT);
-	
+
 	pinMode(Rst_I_Stopp,  OUTPUT);		// reset current limiter
-	pinMode(H_Br_R_En,    OUTPUT);		// PWM output for right motor 
-	pinMode(H_Br_L_En,    OUTPUT);		// PWM output for left motor		
+	pinMode(H_Br_R_En,    OUTPUT);		// PWM output for right motor
+	pinMode(H_Br_L_En,    OUTPUT);		// PWM output for left motor
 	pinMode(Warnleuchte,  OUTPUT);		// output for flash light
-	
+
 	// Initialize outputs
 	digitalWrite(H_Br_R_En, LOW);		// stop right motor
 	digitalWrite(H_Br_L_En, LOW);		// stop left motor
 	digitalWrite(Rst_I_Stopp, HIGH);	// disable power limiter - ATTENTION: ACTIVE-LOW
-	
+
 }
 
 /*
-	this procedure reads the state of the two buttons and controls 
+	this procedure reads the state of the two buttons and controls
 	the variables which are responsible for indicating a pressed
 	or released button to the FSM
 	Neu mit V0.96: lange und kurze Tastendrücke unterscheiden
@@ -50,21 +61,21 @@ void initialize_IO() {
 void get_button_state(){
   int val_push_button = 0;
   int val_RC_button = 0;
-  boolean isOneButtonPressed = false;	// Flag, dass eine oder beide Tasten gerade gedrückt sind 
-  
+  boolean isOneButtonPressed = false;	// Flag, dass eine oder beide Tasten gerade gedrückt sind
+
   // check state of both buttons
   val_push_button = digitalRead(Start_Taste);  // read the PCB button input (active low)
   val_RC_button = digitalRead(Start_Funk);     // read the remote control input (active high)
   isOneButtonPressed = ((!digitalRead(Start_Taste)) | digitalRead(Start_Funk));		// Auswertung, ob eine der beiden Tasten gedrückt ist
-  
+
   // Wenn eine der beiden Tasten NEU (IsButtonReleased == true) gedrückt wurde
   // if ((val_push_button == LOW || val_RC_button == HIGH) && IsButtonReleased == true && IsButtonNeedsProcessing == false){
   if (isOneButtonPressed && IsButtonReleased == true && IsButtonNeedsProcessing == false){
 	tsButtonWasPressed = millis();		// Zeit merken, wann die Taste gedrückt wurde
 	IsButtonReleased = false;			// vermerken, dass die Taste jetzt als gedrückt registriert ist
 	// Klassifizierung des letzten Tastendrucks zur Vorbereitung auf den Neuen löschen
-	BottonWasPressedShort = false;		
-	BottonWasPressedLong = false;		
+	BottonWasPressedShort = false;
+	BottonWasPressedLong = false;
   }
   // Wenn am Ende eines Tastendrucks (IsButtonReleased == false) keine der beide Tasten mehr gedrückt ist ...
   // ... prüfen, ob es ein kurzer oder langer Tastendruck war und eine Aktion auslösen lassen
@@ -93,24 +104,24 @@ byte get_motor_speed() {
 	if (val != V_Motoren) {			// prüfen, ob sich der Wert verändert hat
 		IsMotorSpeedUpdated = true;	// wenn ja, das entsprechende Flag setzen
 	}
-	return (val);	
-	
+	return (val);
+
 }
 
 /*
 	Status der Jumper auslesen und die entsprechenden Flags setzen
 */
 byte get_jumper_status() {
-	if (digitalRead(Jumper1) == LOW) {		// prüfen, ob der Jumper gesteckt ist 
+	if (digitalRead(Jumper1) == LOW) {		// prüfen, ob der Jumper gesteckt ist
 		IsJumper1Active = true;				// wenn ja, das entsprechende Flag setzen
 	}
 	else IsJumper1Active = false;			// ... ansonsten löschen
 
-	if (digitalRead(Jumper2) == LOW) {		// prüfen, ob der Jumper gesteckt ist 
+	if (digitalRead(Jumper2) == LOW) {		// prüfen, ob der Jumper gesteckt ist
 		IsJumper2Active = true;				// wenn ja, das entsprechende Flag setzen
 	}
 	else IsJumper2Active = false;			// ... ansonsten löschen
-	
+
 }
 
 // kontrolliere die Überstromschaltung
@@ -126,7 +137,7 @@ void check_is_motor_overloaded() {
 	Serial.print (";\t portC:");
 	Serial.print (PINC, BIN);
 */
-	pd = (PORTD & portD_Bitmask)>>2;	// Port D auslesen, maskieren und 
+	pd = (PORTD & portD_Bitmask)>>2;	// Port D auslesen, maskieren und
 	pc = (PINC & portC_Bitmask); 	// Port C auslesen und maskieren
 /*
 	Serial.print (";\t pd:");
@@ -161,21 +172,21 @@ void check_is_motor_blocked() {
 	}
 }
 
- 
+
 /*
  *	handle flashing the lamp
  *	there are 2 modes of flashing:
  *	- normal operation of doors
- *	- alarm flashing in case of power overrun 
+ *	- alarm flashing in case of power overrun
  */
 
-// Signallampe ansteuern 
+// Signallampe ansteuern
 void updateFlashLight(boolean light_on) {
 		if (light_on) {
 			digitalWrite(Warnleuchte, HIGH);
 		}
 		else {
-			digitalWrite(Warnleuchte, LOW);			
+			digitalWrite(Warnleuchte, LOW);
 		}
 }
 
@@ -187,7 +198,7 @@ void toggleFlashLight(boolean light_on) {
 			nextTimerFlashEvent = nextTimerFlashEvent + long(flash_off_duration);
 		}
 		else {
-			digitalWrite(Warnleuchte, HIGH);			
+			digitalWrite(Warnleuchte, HIGH);
 			IsFlashLightOn = true;
 			nextTimerFlashEvent = nextTimerFlashEvent + long(flash_on_duration);
 		}
@@ -197,7 +208,7 @@ void initializeFlashLightNewState(char new_state) {
 	// get flash light parameters for new state
 	flash_on_duration 	= parameter[state].flash_on;
 	flash_off_duration 	= parameter[state].flash_off;
-	
+
 	// check if flash light is needed
 	if ((flash_on_duration == 0) || (flash_off_duration == 0)) {
 		IsFlashLightActive = false;		// Signallampe deaktivieren
@@ -212,7 +223,7 @@ void initializeFlashLightNewState(char new_state) {
 		nextTimerFlashEvent = timestamp + long(flash_on_duration);
 	}
 }
-	
+
 void debugFlags() {
 	unsigned int flagmap = 0;
 	flagmap = ((IsDoorOpening) | (IsCurrentOverloaded << 1) | (IsDoorBlocked << 2) | (IsDoorAtEndStop << 3) | (IsButtonNeedsProcessing << 4) | (IsButtonReleased << 5) | (IsMotorSpeedUpdated << 6) | (IsJumper1Active << 7) | (IsJumper2Active << 8)  );
@@ -221,6 +232,3 @@ void debugFlags() {
 	Serial.print (flagmap, BIN);
 	Serial.print (" (Jum2-Jum1-SpdUpd-ButtRel-ButtPro-EndStp-Blk-Ovl-Opng);");
 }
-
-
-

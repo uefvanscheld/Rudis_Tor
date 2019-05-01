@@ -25,6 +25,8 @@
  */
 
 // #include "Torsteuerung.h"
+#include <Arduino.h>
+
 void reset_power_limiter();
 void fastStopMotor_R();
 void fastStopMotor_L();

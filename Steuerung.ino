@@ -1,17 +1,25 @@
 /*
  * This file contains all subroutines related states and and controlling them
- *	
+ *
  *	Version 0.96
  *		- Neueinführung dieser Datei, damit FSM- und Motorsteuerung getrennt sind
- *	
- *	
- *	
- *	
- *	
- *	
+ *
+ *
+ *
+ *
+ *
+ *
  */
 
 // #include "Torsteuerung.h"
+#include <Arduino.h>
+
+void execEnterStateOPENING();
+void execEnterStateBLOCKED();
+void execEnterStateOVERLOAD();
+void execEnterStateCLOSING();
+void execEnterStateSTOPPED();
+void execEnterStateOPENED();
 
 //
 // next lines are related to state OPENING
@@ -72,4 +80,3 @@ void execEnterStateOPENED() {
 	initializeFlashLightNewState(state);	// Warnlampe auf den neuen Status einstellen
 	IsDoorOpening = !IsDoorOpening;			// Drehrichtung der Motoren ändern
 }
-

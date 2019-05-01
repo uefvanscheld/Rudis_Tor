@@ -4,10 +4,10 @@
  *	V0.96: struktur state_params erweitert um folgende Parameter für's Bremsen und Beschleunigen, getrennt für jeden Motor:
  *			- Zielgeschwindigkeit in duty cycle [0..255; byte]
  *			- Zeitdauer [ms; integer] nach der die Geschwindigkeit jeweils wieder um eine Stufe erhöht/verringert wird
- *			- Wert des duty cycles [byte], um den die Geschwindigkeit jeweils verändert wird (+/-) 			
- * 
+ *			- Wert des duty cycles [byte], um den die Geschwindigkeit jeweils verändert wird (+/-)
+ *
  */
- 
+
 //Eingänge digital
 #define  Start_Funk	    6 	//Start-Impuls Funkfernbedienung activ high
 #define  Start_Taste    7 	//Start-Impuls Funkfernbedienung activ low
@@ -38,7 +38,7 @@
 boolean	IsDoorOpening			= true;		// Richtung der Torbewegung: true --> Tor wird geöffnet; false --> schließen
 boolean	IsCurrentOverloaded		= false;	// Hardware-Strombegrenzung hat nicht angesprochen
 boolean IsDoorBlocked			= false;	// Tür ist nicht blockiert
-boolean IsDoorAtEndStop			= false;	// Tür ist nicht am Endanschlag 
+boolean IsDoorAtEndStop			= false;	// Tür ist nicht am Endanschlag
 boolean IsMotorSpeedUpdated		= false;	// am Poti wurde eine neue Motorgeschwindigkeit eingestellt (PWM duty cycle)
 boolean IsJumper1Active			= false;	// ist Jumper 1 gesteckt  ?
 boolean IsJumper2Active			= false;	// ist Jumper 2 gesteckt  ?
@@ -48,9 +48,9 @@ boolean IsButtonReleased		= true;		// Indikator für: es ist gerade keine Taste 
 boolean	IsBottonPressed			= false;	// Indikator für: eine Taste wird gerade gedrückt
 boolean IsButtonNeedsProcessing = false;	// Indikator für: eine Taste wurde betätigt, daher ist eine Aktion erforderlich
 boolean	BottonWasPressedShort	= false;	// Indikator für: es war ein kurzer Tastendruck
-boolean	BottonWasPressedLong	= false;	// Indikator für: es war ein langer Tastendruck	
+boolean	BottonWasPressedLong	= false;	// Indikator für: es war ein langer Tastendruck
 unsigned long	tsButtonWasPressed;					// Zeitpunkt in [msec], wann die Taste herunter gedrueckt wurde
-unsigned int	ButtonLongPressDuration	= 3000;		// Zeit in [msec], die eine Taste gedrückt werden muss, damit ein langer Tasetndruck erkannt wird 
+unsigned int	ButtonLongPressDuration	= 3000;		// Zeit in [msec], die eine Taste gedrückt werden muss, damit ein langer Tasetndruck erkannt wird
 
 
 // various var for motor control
@@ -80,7 +80,7 @@ boolean IsMotor_R_Ramping = false;		// Flag, das anzeigt, ob sich der Motor gera
 boolean IsMotor_L_Ramping = false;		// Flag, das anzeigt, ob sich der Motor gerade in einer Beschleunigungs- bzw. Bremsphase befindet
 boolean IsMotor_R_SpeedingUp = false;	// Flag, das anzeigt, ob der Motor gerade beschleunigt (=true) oder abbremst (=false)
 boolean IsMotor_L_SpeedingUp = false;	// Flag, das anzeigt, ob der Motor gerade beschleunigt (=true) oder abbremst (=false)
- 
+
 // possible states of the door control and their numeric equivalent
 enum state_list {	CLOSED, 	// 0
 					OPENING,	// 1
@@ -91,10 +91,10 @@ enum state_list {	CLOSED, 	// 0
 					OPENED		// 6
 				};
 
-// create instance and initialize				
+// create instance and initialize
 state_list state = CLOSED;
 
-// define parameters for the different states 
+// define parameters for the different states
 typedef struct
  {
 	byte Motor_R_Speed_Target;				// Zielwert für den duty cycle des rechten Motors in diesem Status; muss int sein für analogWrite() !!
@@ -107,7 +107,7 @@ typedef struct
 	unsigned int flash_on;					// [ms]; Dauer, wie lange die Warnlampe in diesem Betriebsmodus eingeschaltet sein soll
 	unsigned int flash_off;					// [ms]; Dauer, wie lange die Warnlampe ausgeschaltet sein soll
 
-		// bei den nächsten 4 Werten ist darauf zu achten, dass die erforderliche Zeit bis zum Erreichen der Zielgeschwindigkeit 
+		// bei den nächsten 4 Werten ist darauf zu achten, dass die erforderliche Zeit bis zum Erreichen der Zielgeschwindigkeit
 		// (=(Vziel - Vaktuell)*Speed_Interval/Speed_Step) kleiner ist, als die geplante Dauer des Zustand (duration)
 		// anderenfalls erreichen die Motoren nicht ihre Zielgeschwindigkeit und bewegen sich ...
 		// u.U. mit einer falschen Geschwindigkeit durch den nächsten Status (z.B. nach der Anfangs-Beschleunigung beim Öffnen)
@@ -118,11 +118,11 @@ typedef struct
 		// In diesem Fall übernehmen die Tore die Geschwindigkeit des vorhergehenden Zustand und bewegen sich damit weiter, falls keine anderen Parameter dies verhindern
 	byte Motor_R_Speed_Step;				// Wert, um den sich das PWM-Signal jedesmal verändert; immer positiv
 	byte Motor_L_Speed_Step;				// Wert, um den sich das PWM-Signal jedesmal verändert; immer positiv
-	
+
 }  state_params;
 
 state_params parameter[7] = {
-	// Target	|Target		|Status,|Blockier-	|Flash,	|Flash	|Speed	|Speed	|Speed	|Speed	
+	// Target	|Target		|Status,|Blockier-	|Flash,	|Flash	|Speed	|Speed	|Speed	|Speed
 	// Speed R,	|Speed L,	|Dauer,	|strom-		| On 	| Off	|IntVal |IntVal |Step   |Step
 	// (0.255),	|(0.255),	|[ms] ,	|stärke,	| [ms],	| [ms],	| Re    | Li    | Re    | Li
 	{ 	0,		0,	 		0,		0,			0,		0,		100,	100,	0,		0,		 		},		// #0 == CLOSED
