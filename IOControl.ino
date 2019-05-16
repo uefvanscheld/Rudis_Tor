@@ -9,18 +9,7 @@
  * - read jumpers which configure the delays of opening and closing doors
  */
 
-// #include "Torsteuerung.h"
-#include <Arduino.h>
-
-void get_button_state();
-byte get_motor_speed();
-byte get_jumper_status();
-void check_is_motor_overloaded();
-void check_is_motor_blocked();
-void updateFlashLight(boolean light_on);
-void toggleFlashLight(boolean light_on);
-void initializeFlashLightNewState(char new_state);
-void debugFlags();
+ #include "Torsteuerung.h"
 
 void initialize_IO() {
 	pinMode(Start_Funk,   INPUT);
@@ -156,19 +145,11 @@ void check_is_motor_blocked() {
 	// Stromstärke auslesen und gegen den Grenzwert vergleichen
 	Mot_R_Current = analogRead(Strom_R);
 	Mot_L_Current = analogRead(Strom_L);
-	if ((Mot_R_Current > parameter[state].curr_limit) || (Mot_L_Current > parameter[state].curr_limit)){
-		// die Strommessung hat nur Auswirkungen, wenn die entsprechenden Jumper gesteckt sind !!
-		if ((state == OPENING) && IsJumper1Active)	{	// wenn das Tor gerade öffnet, dann bedeutet der zu hohe Strom: ---> Tor ist am Endanschlag
-			IsDoorAtEndStop = true;
-		}
-		else if ((state == CLOSING) && IsJumper2Active)	{	// wenn das Tor gerade schließt, dann bedeutet der zu hohe Strom: ---> Tor ist auf ein Hindernis gestossen
-			IsDoorBlocked = true;
-		}
-		/*
-		if (state != BLOCKED) {		// flag nur setzen, wenn FSM nicht bereits im Status "BLOCKED" ist (sonst wird der Status nicht sauber verlassen)
-			IsDoorBlocked = true;	// ... set blocked flag
-		}
-		*/
+	if (Mot_R_Current > parameter[state].curr_limit){
+		IsDoor_R_AtEndStop = true;
+	}
+	if (Mot_L_Current > parameter[state].curr_limit){
+		IsDoor_L_AtEndStop = true;
 	}
 }
 

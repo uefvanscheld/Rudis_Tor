@@ -1,6 +1,20 @@
 /*
  ************************************************
  *
+ *	Version 0.97 (Testfahrten)
+ *	- Ergänzung um eine Ablaufsteuerung, die die verschiedenen Testphasen steuern
+ *	- Dies sind:
+ *	- a) Messung des minimalen PMW-Wertes, der die Erkennung der Überlastsituation möglich macht
+ *	- b) Ermittlung des minimalen PMW-Wertes, bei dem sich ein Tor übehaupt bewegt
+ *	- c) Messungen der Laufzeiten der Tore bei verschiedenen PWM-Werten
+ *	- 
+ *	- 
+ *	- 
+ *
+ *
+ *
+ *
+ *
  *	Version 0.96
  *	- Funktion (#22) zum Beschleunigen und Abbremsen der Tore eingebaut (getrennt für jedes Tor)
 	  Es wird für jeden Status ein Zielgeschwindigkeit (PWM duty cycle) festgelegt,
@@ -30,7 +44,7 @@
 
 #include <Arduino.h>
 #include "Torsteuerung.h"
-#include "IOControl.ino"
+
 
 void initialize_FSM();
 
@@ -47,11 +61,15 @@ void initialize_FSM() {
 
 void setup() {
 	Serial.begin(115200);
-	initialize_IO();		// alle Ein- und Ausgänge in einen definierten Zustand bringen
-	initialize_FSM();		// den Status der Steuerung in einen definierten Status (=Geschlossen) bringen
-	PWM_Motor_R =   0; 		//Rechter Motor, Initialisierung auf 0 (Motor aus)
-	PWM_Motor_L =   0; 		//Linker Motor, Initialisierung auf 0 (Motor aus)
-
+	initialize_IO();					// alle Ein- und Ausgänge in einen definierten Zustand bringen
+	initialize_FSM();					// den Status der Steuerung in einen definierten Status (=Geschlossen) bringen
+	PWM_Motor_R =   0; 					//Rechter Motor, Initialisierung auf 0 (Motor aus)
+	PWM_Motor_L =   0; 					//Linker Motor, Initialisierung auf 0 (Motor aus)
+			
+	test_phase = 0;						// Variable für Phasen initialisieren
+	nextTimer_Motor_L_Event = millis();	// Timer des linken Motors für des zeitversetzte Schließen vorbereiten
+	IsDoorOpening			= true;		// beide Tore werden zuerst geöffnet
+	state = INITIALIZED;				// alle Werte initialisiert
 }
 
 void loop() {
@@ -59,12 +77,6 @@ void loop() {
 	// Aktuelle Zeit abfragen bzw. Zeitstempel ermitteln und zwischenspeichern;
 	// wird für die komplette Dauer einer Schleife zur Prüfung anstehender Events (Stati, Motoren, Flashlight ...) genutzt
 	timestamp = millis();
-
-	// V_Motoren = get_motor_speed();		// Gewünschte Motorgeschwindigkeit abfragen
-/*
-	PWM_Motor_R = get_motor_speed();		// Potentiometer für gewünschte Motorgeschwindigkeit für jeden Motor einzeln abfragen
-	PWM_Motor_L = get_motor_speed();		// Potentiometer für gewünschte Motorgeschwindigkeit für jeden Motor einzeln abfragen
-*/
 
 	/*
 		jetzt auf wichtige Ereignisse prüfen:
@@ -115,15 +127,16 @@ void loop() {
 	debugFlags();
 */
 	switch (state) {
-		case CLOSED:
-			if(IsButtonNeedsProcessing) {			// Tor ist geschlossen; eine Taste wird gedrückt --> Öffnen
-				state = OPENING;					// neuer Status: OPENING
-				execEnterStateOPENING();
+		case INITIALIZED:
+			if(IsButtonNeedsProcessing) {			// System ist initialisiert; ein Knopfdruck startet das Schließen des linken Tores
+				state = PHASE1_OPENING;				// neuer Status: PHASE1_CLOSING
+				execEnterStatePHASE1_OPENING();
 				IsButtonNeedsProcessing = false;	// Tastendruck wurde bearbeitet
 			}
+			execEnterStateINITIALIZED();
 		break;
-		case OPENING:
-			// Tor öffnet sich gerade
+		case PHASE1_OPENING:
+			// beide Tore wird gerade geöffnet
 			if(IsDoorAtEndStop) {
 				state = OPENED;					// neuer Status: OPENED; Tor am Endanschlag
 				execEnterStateOPENED();

@@ -24,19 +24,7 @@
  ************************************************
  */
 
-// #include "Torsteuerung.h"
-#include <Arduino.h>
-
-void reset_power_limiter();
-void fastStopMotor_R();
-void fastStopMotor_L();
-void sendSyncImpuls();
-void startMotor_R(int pmw_val, boolean opening);
-void startMotor_L(int pmw_val, boolean opening);
-void updateMotorSpeed(byte pmw_val);
-void Update_PMW_Motor_R();
-void Update_PMW_Motor_L();
-
+ #include "Torsteuerung.h"
 
 /*
 	this procedure generates a short impuls to set the flipflop  Q outputs of L6506

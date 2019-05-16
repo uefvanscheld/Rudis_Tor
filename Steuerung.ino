@@ -11,21 +11,28 @@
  *
  */
 
-// #include "Torsteuerung.h"
-#include <Arduino.h>
-
-void execEnterStateOPENING();
-void execEnterStateBLOCKED();
-void execEnterStateOVERLOAD();
-void execEnterStateCLOSING();
-void execEnterStateSTOPPED();
-void execEnterStateOPENED();
-
+ #include "Torsteuerung.h"
 //
 // next lines are related to state OPENING
 //
 void execEnterStateOPENING()  {
 	startMotor_R(V_Motoren, IsDoorOpening);		// start MOTOR R
+	startMotor_L(V_Motoren, IsDoorOpening);		// start MOTOR L
+	initializeFlashLightNewState(state);		// Warnlampe auf den neuen Status einstellen
+}
+
+//
+// next lines are related to state INITIALIZED
+//
+void execEnterStateINITIALIZED()  {
+	initializeFlashLightNewState(state);		// Warnlampe auf den neuen Status einstellen
+}
+
+//
+// next lines are related to state PHASE1_CLOSING
+//
+void execEnterStatePHASE1_CLOSING()  {
+	IsDoorOpening			= false;			// Tor wird geschlossen
 	startMotor_L(V_Motoren, IsDoorOpening);		// start MOTOR L
 	initializeFlashLightNewState(state);		// Warnlampe auf den neuen Status einstellen
 }
