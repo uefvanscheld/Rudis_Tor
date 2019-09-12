@@ -1,31 +1,99 @@
 
 
 Beschreibung des Ablaufs der Testfahren
-(Dokumentation für Version V 0.9x der Torsteuerung)
+(Dokumentation für Version V 0.97 der Torsteuerung)
 
 Das Programm der Testfahrten gliedert sich in drei Phasen mit unterschiedlichen Zielen:
-Phase 1: Ermittlung des minimalen PWM-Wertes, der zur Erkennung des Blockierstroms erforderlich ist
+Phase 1: Ermittlung des minimalen PWM-Wertes, der zur Erkennung des Blockierstroms erforderlich ist (aus dem Stillstand heraus !)
 Phase 2: Ermittlung des minimalen PWM-Wertes, mit dem sich ein Tor bewegen lässt
-Phase 3: Messung der Zeiten für das Öffnen und Schließen der Tore mit unterschiedlichen Geschwngigkeiten (=PWM-Werten)
-??? Phase 4: Messung eines Stromwertes für das Abschalten bei einem Hindernis (kein Endanschlag), wenn die Tore mit voller Geschwindigkeit fahren
+Phase 3: Messung der Zeiten für das Öffnen und Schließen der Tore mit unterschiedlichen Geschwindigkeiten (=PWM-Werten)
+< 
+nicht implementiert in V 0.97:
+Phase 4: Messung eines Stromwertes für das Abschalten bei einem Hindernis (kein Endanschlag, d.h. ggf. bei einer niedrigeren Stromstärke), 
+wenn die Tore mit voller Geschwindigkeit fahren;
+ggf. lässt sich dies aber auch aus den Messungen der Stromstärke ableiten, die kontinuierlich während der Laufzeitmessungen in Phase 3 erfolgen)
+>
 
-Nicht alle hierbei ermittelten Werte werden direkt für die weitere Programmierung benötigt, sollen aber bereits jetzt für den Fall ermittelt werden, dass sie später einmal benötigt werden.
+Nicht alle hierbei ermittelten Werte werden direkt für die weitere Programmierung benötigt, sollen aber bereits bei dieser Gelegenheit ermittelt werden, 
+für den Fall, dass sie später einmal benötigt werden.
 
 Die 3 Phasen werden fest nacheinander durchgeführt; eine Änderung der Reihenfolge ist nicht vorgesehen.
 Bei einem Neustart erfolgt wieder ein kompletter Durchlauf.
-Die einzelnen Phasen bzw. Schritte werden jedoch manuell durch die Betätigung des Tasters initiiert, um zwischen den Phasen Gelegenheit zu haben, die auf der seriellen Schnittstelle ausgegebenen Werte zu sichern und den Ablauf zumindest in Teilen kontrollieren zu können.
+Die einzelnen Phasen bzw. Schritte werden jedoch einzeln manuell durch die Betätigung des Tasters initiiert, 
+um zwischen den Phasen Gelegenheit zu haben, die auf der seriellen Schnittstelle ausgegebenen Werte zu sichern 
+und den Ablauf zumindest in Teilen kontrollieren zu können.
 
 Der gesamte Ablauf ist wie folgt:
 a)	das Programm initialisiert sich und wartet dann auf einen Tastendruck um mit Phase 1 zu starten.
 	Der Abschluss der Initialisierung wird mit einem dauerhaften Blinken im folgenden Rythmus angezeigt: 1sec an, 1sec aus
-b)	Nach der Betätigung der Taste starte Phase 1 in 3 Abschnitten.
+	
+b)	Phase 1:
+	Nach der Betätigung der Taste startet Phase 1 in 3 Abschnitten.
 	1) Dabei werden zuerst beide Tore geöffnet und an den Anschlag gefahren, um einen definierten Zustand zu erreichen.
-	Signal der Lampe: Blinken im folgenden Rythmus angezeigt: 0,2 sec an, 0,8 sec aus
-	Die Tore können im Notfall durch Drücken der Taste gestoppt werden. Eine Fortsetzung der Testfahrten ist dann jedoch nicht mehr möglich; statt dessen muss die Steuerung neu gestartet werden und die Testfahren werden wieder von Beginn an durchlaufen.
-	2) Nach dem Erreichen des Anschlags werden die Motoren automatisch gestoppt und beginnend mit einem PWM-Wert von 0 wird jeweils für 2 Sekunden getestet, ob die Stromstärke für die Erkennung eines Endanschlags erreicht wird. Ist dies nach 2 Sekunden nicht der Fall, wird der PWM-Wert um eine Stufe (= 10 Punkte) erhöht und erneut für 2 Sekunden gemessen. Die Ablauf wiederholt sich, bis zum ersten Mal die Strommessung einen Wert in Höhe der Abschaltschwelle für einen Endanschlag erreicht.
-	Vor jeder neuen Messung wird der jeweils neue PWM-Wert ausgegeben.
+	Signal der Lampe beim Öffnen: Blinken im folgenden Rythmus: 0,2 sec an, 0,8 sec aus
+	Die Tore können im Notfall durch Drücken der Taste gestoppt werden. 
+	Eine Fortsetzung der Testfahrten ist dann jedoch nicht mehr möglich; statt dessen muss die Steuerung neu gestartet werden 
+	und die Testfahren werden wieder von Beginn an durchlaufen.
+	
+	2) Nach dem Erreichen des Anschlags werden die Motoren automatisch gestoppt und beginnend mit einem PWM-Wert von 0 wird 
+	jeweils für 2 Sekunden getestet, ob die Stromstärke für die Erkennung eines Endanschlags erreicht wird. 
+	Ist dies nach 2 Sekunden nicht der Fall, wird der PWM-Wert um eine Stufe (= 10 Punkte) erhöht und erneut für 2 Sekunden gemessen. 
+	Dieser Ablauf wiederholt sich, bis zum ersten Mal die Strommessung einen Wert in Höhe der Abschaltschwelle für einen Endanschlag erreicht.
+	Vor jeder Messung wird der jeweils neue PWM-Wert über die serielle Schnittstelle ausgegeben.
 	Signal der Lampe während der Messung: Blinken im folgenden Rythmus: 0,5 sec an, 0,5 sec aus.
+	Sobald der Endanschlag erkannt wird, werden die Motoren gestoppt und die Abschnitt 2 beendet.
+	
 	3) Den Abschluss der Messungen zeigt das folgende Signal an: Blinken im folgenden Rythmus: 1 sec an, 1 sec aus.
-	Der PMW-Wert, bei dem der Abschaltstrom erkannt wurde, wird dann nochmal ausgegeben.
+	Der PMW-Wert, bei dem der Abschaltstrom erkannt wurde (PWM_min_blocking), wird dann nochmals ausgegeben.
 	Danach wartet das Programm auf einen weiteren Tastendruck, um Phase2 zu beginnen.
-c)	
+	
+c)	Phase 2:
+	in Phase 2 soll der minmale PWM-Wert (bzw. die minimale Leistung) ermittelt werden, ab der sich ein Tor bewegt.
+	Dazu muss der Benutzer das Tor nach dem Start der Testphase beobachten und sofort die Taste drücken, 
+	wenn eine Bewegung des Tores festgestellt wird.
+	Zweck dieser Messung ist es, beispielsweise die Beschleunigungsphase der Tore möglichst kurz gestalten zu können, 
+	da PWM-Werte ohne Torbewegung übersprungen werden.
+	
+	Nach dem Tastendruck zum Starten der Phase wird die Drehrichtung des RECHTEN Motors auf "Schließen" eingestellt. 
+	Der PWM-Wert wird beginnend bei Null in 10er-Schritten erhöht und dann jeweils 2 sec gewartet, 
+	damit das Tor auf die entsprechende Geschwindigkeit beschleunigen und nach Erkennung einer Bewegung die Taste 
+	durch den Benutzer gedrückt werden kann.
+	Erfolgt kein Tastendruck innerhalb der 2 sec, wird der PWM-Wert erneut erhöht.
+	Signal der Lampe während der Messung: Blinken im folgenden Rythmus: 0,2 sec an, 0,8 sec aus.
+	Der jeweils aktuelle PWM-Wert wird dabei auf dem seriellen Monitor ausgegeben.
+	Bei einem Tastendruck wird das RECHTE Tor gestoppt.	
+	Der PMW-Wert, bei dem der Tastendruck erfolgte (PWM_min_moving), wird dann nochmals ausgegeben.
+	Den Abschluss dieser Phase zeigt das folgende Signal an: Blinken im folgenden Rythmus: 1 sec an, 1 sec aus.
+	Danach wartet das Programm auf einen weiteren Tastendruck, um Phase 3 zu beginnen.
+	
+d)	Phase 3:
+	Ziel: Messung der Laufzeiten bei unterschiedlichen PWM-Werten (getrennt für Offnen und Schließen).
+	Diese Phase benötigt etwas Zeit, da das Tor etwa 10-15 mal den Zyklus aus Schließen- und Öffnen duchfährt !!
+	Diese Testphase erfolgt nur mit dem LINKEN Tor.
+	
+	Dazu wird zunächst der Startwert für das PWM-Signal (PWM_runtime) für diese Phase berechnet: 
+	der Größere der beiden Werte PWM_min_blocking (aus Testphase 1) und PWM_min_moving (aus Testphase 2). 
+	Grund: es muss sichergestellt sein, dass sich das Tor bewegt UND eine Blockierung erkannt werden kann (Anforderungen für den Normalbetrieb).
+	
+	Dann durchfährt das linke Tor beginnend mit Start-PWM-Wert einen kompletten Zyklus aus Schließen und anschließendem Öffnen.
+	Der Test wird nur mit einem Tor durchgeführt, um Probleme mit einem möglichen Verkeilen der Tore kurz vor dem Schließen 
+	zu vermeiden (einfachere Programmierung) und unter der Annahme, dass sich die Geschwindigkeit der Tore nicht wesentlich unterscheidet.
+	Dabei werden die Zeiten separat für Öffnen und Schließen protokolliert. 
+	Signal der Lampe beim Schließen und Öffnen: Blinken im folgenden Rythmus: 0,2 sec an, 0,8 sec aus.
+	Bei jedem Anschlag pausiert das Programm für 3 sec, um ein mechanisches Aufschwingen der Tore zu verhindern.
+	Im Anschluss wird der PWM-Wert um 10 erhöht und ein weiterer Zyklus durchlaufen.
+	Der letzte Zyklus erfolgt mit maximaler Geschwindigkeit (PWM = 255). 
+	Danach stoppt die Phase 3 selbständig. 
+	Ab einem PWM-Wert von 150 beginnen die Fahrten mit einer Beschleunigungsphase, um zu verhindern, 
+	dass beim Starten des Tores der Anlaufstrom die Überwachung des maximalen Motorstrom auslöst und den Motor gleich wieder stoppt.
+	Das Tor kann jederzeit durch Drücken der Taste gestoppt werden.
+
+	Diese Testphase dient der Messung der Laufzeiten der Tore in Abhängigkeit vom Motorsignal, da man nicht von einem 
+	linearen Zusammenhang ausgehen kann.
+	Auf Basis dieser Daten können später aus PWM-Wert und der überwachten Torlaufzeit ungefähre Geschwindigkeits- und Positionsbestimmungen 
+	der Tore ermittel und durchgeführen.
+	
+	Anschließend ist Phase 3 beendet und damit das gesamte Testprogramm.
+	Den Abschluss dieser Phase zeigt das folgende Signal an: Blinken im folgenden Rythmus: 1 sec an, 1 sec aus.
+	
+	

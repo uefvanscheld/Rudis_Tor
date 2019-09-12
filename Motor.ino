@@ -6,7 +6,9 @@
  ************************************************
  *	Historie
  *
- *	V0.96
+ *	Version 0.97 (speziell angepasst für die geplanten Testfahrten mit 3 Phasen)
+ *
+ *	Version 0.96
  *	- Auslagerung der Funktionen für die Steuerung (FSM) in eine eigene Datei ("Steuerung")
  *	- updateMotorSpeed() wird abgelöst durch eine separate Routine für jeden Motor
  *	- die Motoren können jetzt beschleunigt und langsam abgebremst werden (IsMotor_x_Ramping = true/false; IsMotor_x_SpeedingUp = true/false)
@@ -15,8 +17,6 @@
  *	- die Routinen Update_PWM_Motor_x sorgen bei einem entsprechend Zeitevent dafür, dass das PWM-Signal entsprechend der
  *		Beschleunigungs-/Bremskurve (=Ramping) gesteuert wird und bei Erreichen des Zielgeschwindigkeit das Ramping beendet
  *
- *
- *
  *	Neu in Version 0.95
  *	- Erkennung von langen Tastendrücken (Issue #17)
  *
@@ -24,7 +24,7 @@
  ************************************************
  */
 
- #include "Torsteuerung.h"
+// #include "Torsteuerung.h"
 
 /*
 	this procedure generates a short impuls to set the flipflop  Q outputs of L6506
@@ -132,6 +132,40 @@ void startMotor_L(int pmw_val, boolean opening) {
 	analogWrite(H_Br_L_En, (int)PWM_Motor_L);
 }
 
+/*
+ *	Neue Funktion für die Version 0.97 (Testfahrten)
+ *	
+ *	der Parameter pmw_val wird in dieser Version als Zielgeschwindigkeit für diesen Start des Motors interpretiert
+ *	Dies ist für die Phase 3 (Messung der Fahrzeiten) erforderlich
+ *
+ */
+
+void startMotor_L_Tests(int pmw_val_target, boolean opening) {
+	digitalWrite(H_Br_L_En, LOW);	// stop the PWM signal to prevent confusion
+	sendSyncImpuls();				// sende SYNC-Impuls
+	IsMotor_L_Ramping = true;
+	if (PWM_Motor_L >= pmw_val_target) { 							// nun ermitteln, ob beschleunigt oder gebremst werden muss
+		IsMotor_L_SpeedingUp = false;								// --> Bremsen
+	}
+	else {
+		IsMotor_L_SpeedingUp = true;								// --> Beschleunigen
+	}
+	// ... und den nächsten Timerevent für den Motor festlegen
+	nextTimer_Motor_L_Event = timestamp + parameter[state].Motor_L_Speed_Interval;
+	// jetzt die Drehrichtung des Motors einstellen
+	if(opening) {			// Linkes Tor öffnen
+		digitalWrite(H_Br_L_Z, LOW);		// Motor_L (-) auf Masse legen
+		digitalWrite(H_Br_L_A, HIGH);		// Motor_L (+) auf Vcc legen
+	}
+	else {					// linkes Tor schließen
+		digitalWrite(H_Br_L_A, LOW);		// Motor_L (+) auf Masse legen
+		digitalWrite(H_Br_L_Z, HIGH);		// Motor_L (-) auf Vcc legen
+	}
+	// Motor jetzt mit der derzeit aktuellen Geschwindigkeit (PWM-Signal) starten
+	analogWrite(H_Br_L_En, (int)PWM_Motor_L);
+}
+
+
 void updateMotorSpeed(byte pmw_val) {
 	// keine Änderung bzgl. Drehrichtung etc.
 	// beide Motoren erhalten die gleiche Geschwindigkeit
@@ -144,20 +178,19 @@ void updateMotorSpeed(byte pmw_val) {
 *	Diese Routine wird aufgerufen, wenn ein Zeitinterval für den Motor abgelaufen ist
 */
 void Update_PMW_Motor_R() {
-	byte target_speed = parameter[state].Motor_R_Speed_Target;	// Zielgeschwindigkeit ermitteln
 	// ermitteln, ob die Geschwindigkeit erhöht oder reduziert werden muss
 	if (IsMotor_R_SpeedingUp) {
 		// PWM-Wert nur so stark erhöhen, dass der Zielwert nicht überschritten wird; besonders wichtig bei Zielwert = 255, um Überlauf zu vermeiden
-		PWM_Motor_R = PWM_Motor_R + min((target_speed - PWM_Motor_R),parameter[state].Motor_R_Speed_Step);
+		PWM_Motor_R = PWM_Motor_R + min((PWM_Motor_R_Target - PWM_Motor_R),parameter[state].Motor_R_Speed_Step);
 	}
 	else {
 		// PWM-Wert nur so stark reduzieren, dass der Zielwert nicht unterschritten wird; besonders wichtig bei Zielwert = 0, um Überlauf zu vermeiden
-		PWM_Motor_R = PWM_Motor_R - min((PWM_Motor_R - target_speed),parameter[state].Motor_R_Speed_Step);
+		PWM_Motor_R = PWM_Motor_R - min((PWM_Motor_R - PWM_Motor_R_Target),parameter[state].Motor_R_Speed_Step);
 
 	}
 	analogWrite(H_Br_R_En, (int)PWM_Motor_R);	// PWM-Signal aktualisieren
 	// prüfen, ob der rechte Motor seine Zielgeschwindigkeit erreicht hat;
-	if (PWM_Motor_R == target_speed) {				// falls ja, dann das Flag für Beschleunigen/Bremsen löschen
+	if (PWM_Motor_R == PWM_Motor_R_Target) {				// falls ja, dann das Flag für Beschleunigen/Bremsen löschen
 		IsMotor_R_Ramping = false;
 	}
 	else {											// falls nicht, dann den Zeitpunkt für die nächste Geschwindigkeitsanpassung ermitteln
@@ -167,20 +200,19 @@ void Update_PMW_Motor_R() {
 
 // Der PWM-Wert für den linken Motor muss angepasst werden
 void Update_PMW_Motor_L() {
-	byte target_speed = parameter[state].Motor_L_Speed_Target;	// Zielgeschwindigkeit ermitteln
 	// ermitteln, ob die Geschwindigkeit erhöht oder reduziert werden muss
 	if (IsMotor_L_SpeedingUp) {
 		// PWM-Wert nur so stark erhöhen, dass der Zielwert nicht überschritten wird; besonders wichtig bei Zielwert = 255, um Überlauf zu vermeiden
-		PWM_Motor_L = PWM_Motor_L + min((target_speed - PWM_Motor_L),parameter[state].Motor_L_Speed_Step);
+		PWM_Motor_L = PWM_Motor_L + min((PWM_Motor_L_Target - PWM_Motor_L),parameter[state].Motor_L_Speed_Step);
 	}
 	else {
 		// PWM-Wert nur so stark reduzieren, dass der Zielwert nicht unterschritten wird; besonders wichtig bei Zielwert = 0, um Überlauf zu vermeiden
-		PWM_Motor_L = PWM_Motor_L - min((PWM_Motor_L - target_speed),parameter[state].Motor_L_Speed_Step);
+		PWM_Motor_L = PWM_Motor_L - min((PWM_Motor_L - PWM_Motor_L_Target),parameter[state].Motor_L_Speed_Step);
 
 	}
 	analogWrite(H_Br_L_En, (int)PWM_Motor_L);	// PWM-Signal aktualisieren
-	// prüfen, ob der rechte Motor seine Zielgeschwindigkeit erreicht hat;
-	if (PWM_Motor_L == target_speed) {				// falls ja, dann das Flag für Beschleunigen/Bremsen löschen
+	// prüfen, ob der linke Motor seine Zielgeschwindigkeit erreicht hat;
+	if (PWM_Motor_L == PWM_Motor_L_Target) {				// falls ja, dann das Flag für Beschleunigen/Bremsen löschen
 		IsMotor_L_Ramping = false;
 	}
 	else {											// falls nicht, dann den Zeitpunkt für die nächste Geschwindigkeitsanpassung ermitteln

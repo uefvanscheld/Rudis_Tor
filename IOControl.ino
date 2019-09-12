@@ -7,11 +7,32 @@
  * - flashing the signal light (normal operation & error condition)
  * - read the potentiometer for test purposes
  * - read jumpers which configure the delays of opening and closing doors
+ *
+ *	Version 0.97 (speziell angepasst für die geplanten Testfahrten)
+ *
  */
 
- #include "Torsteuerung.h"
+// #include "Torsteuerung.h"
 
-void initialize_IO() {
+void initialize_FSM() {
+  IsDoorOpening     = true;   // Tor wird geöffnet; false --> schließen
+  IsCurrentOverloaded   = false;  // Hardware-Strombegrenzung hat nicht angesprochen
+  IsDoorBlocked     = false;  // Tür ist nicht blockiert
+  IsButtonNeedsProcessing = false;  // keine Taste wurde betätigt, daher keine Aktion notwendig
+  IsButtonReleased    = true;   // es ist gerade keine Taste gedrückt
+  IsMotorSpeedUpdated   = false;  // keine neue Motorgeschwindigkeit eingestellt
+  
+  IsDoor_R_AtEndStop = false;
+  IsDoor_L_AtEndStop = false;
+  
+  IsDoor_R_Blocked = false;
+  IsDoor_L_Blocked = false;
+
+  state = INITIALIZED;          // Annahme: Tor ist zu Beginn geschlossen
+}
+
+
+void initialize_IO()	{
 	pinMode(Start_Funk,   INPUT);
 	pinMode(Start_Taste,  INPUT_PULLUP);
 	pinMode(Jumper1,      INPUT_PULLUP);
@@ -47,7 +68,8 @@ void initialize_IO() {
 	or released button to the FSM
 	Neu mit V0.96: lange und kurze Tastendrücke unterscheiden
 */
-void get_button_state(){
+
+void get_button_state()	{
   int val_push_button = 0;
   int val_RC_button = 0;
   boolean isOneButtonPressed = false;	// Flag, dass eine oder beide Tasten gerade gedrückt sind
@@ -119,24 +141,77 @@ void check_is_motor_overloaded() {
 	byte pd = 0;	// var für Port D
 	byte pc = 0;	// var für Port C
 /*
-	Serial.print (";\t portD:");
+	Serial.print (F(";\t portD:"));
 	Serial.print (PORTD, BIN);
-	Serial.print (";\t DDRC:");
+	Serial.print (F(";\t DDRC:"));
 	Serial.print (DDRC, BIN);
-	Serial.print (";\t portC:");
+	Serial.print (F(";\t portC:"));
 	Serial.print (PINC, BIN);
 */
 	pd = (PORTD & portD_Bitmask)>>2;	// Port D auslesen, maskieren und
 	pc = (PINC & portC_Bitmask); 	// Port C auslesen und maskieren
 /*
-	Serial.print (";\t pd:");
+	Serial.print (F(";\t pd:"));
 	Serial.print (pd, BIN);
-	Serial.print (";\t pc:");
+	Serial.print (F(";\t pc:"));
 	Serial.print (pc, BIN);
-    Serial.println ("");
+    Serial.println (F(""));
 */
 	if (pd != pc) {					// in case both are not the same ...
 		IsCurrentOverloaded = true;	// ... set overload flag
+	}
+}
+
+// kontrolliere die Überstromerkennung für den rechten Motor 
+// dazu werden Port D (D0-D7) und Port C (A0-A7) gelesen und 2 bits miteinander verglichen
+void check_is_motor_R_overloaded() {
+	byte pd = 0;	// var für Port D
+	byte pc = 0;	// var für Port C
+/*
+	Serial.print (F(";\t portD:"));
+	Serial.print (PORTD, BIN);
+	Serial.print (F(";\t DDRC:"));
+	Serial.print (DDRC, BIN);
+	Serial.print (F(";\t portC:"));
+	Serial.print (PINC, BIN);
+*/
+	pd = (PORTD & portD_Bitmask_R)>>2;	// Port D auslesen, für den rechten Motor maskieren und
+	pc = (PINC & portC_Bitmask_R); 		// Port C auslesen und ebenfalls maskieren
+/*
+	Serial.print (F(";\t pd:"));
+	Serial.print (pd, BIN);
+	Serial.print (F(";\t pc:"));
+	Serial.print (pc, BIN);
+    Serial.println (F(""));
+*/
+	if (pd != pc) {					// in case both are not the same ...
+		IsCurrent_R_Overloaded = true;	// ... set overload flag
+	}
+}
+// kontrolliere die Überstromerkennung für den linken Motor 
+// dazu werden Port D (D0-D7) und Port C (A0-A7) gelesen und 2 bits miteinander verglichen
+void check_is_motor_L_overloaded() {
+	byte pd = 0;	// var für Port D
+	byte pc = 0;	// var für Port C
+/*
+	Serial.print (F(";\t portD:"));
+	Serial.print (PORTD, BIN);
+	Serial.print (F(";\t DDRC:"));
+	Serial.print (DDRC, BIN);
+	Serial.print (F(";\t portC:"));
+	Serial.print (PINC, BIN);
+*/
+	pd = (PORTD & portD_Bitmask_L)>>2;	// Port D (PORTD verwenden, um auch die Ausgänge lesen zu können) auslesen, für den rechten Motor maskieren und
+	pc = (PINC & portC_Bitmask_L); 		// Port C (read only input) auslesen und ebenfalls maskieren
+/*
+	Serial.print (F(";\t pd:"));
+	Serial.print (pd, BIN);
+	Serial.print (F(";\t pc:"));
+	Serial.print (pc, BIN);
+    Serial.println (F(""));
+*/
+	if (pd != pc) {					// in case both are not the same ...
+		IsCurrent_L_Overloaded = true;	// ... set overload flag
 	}
 }
 // kontrolliere die Stromstärke der Motoren anhand der Parameter-Tabelle (Array)
@@ -145,11 +220,13 @@ void check_is_motor_blocked() {
 	// Stromstärke auslesen und gegen den Grenzwert vergleichen
 	Mot_R_Current = analogRead(Strom_R);
 	Mot_L_Current = analogRead(Strom_L);
-	if (Mot_R_Current > parameter[state].curr_limit){
-		IsDoor_R_AtEndStop = true;
+	Mot_R_Current_Limit = parameter[state].curr_limit;
+	Mot_L_Current_Limit = parameter[state].curr_limit;
+	if (Mot_R_Current > Mot_R_Current_Limit){
+		IsDoor_R_Blocked = true;
 	}
-	if (Mot_L_Current > parameter[state].curr_limit){
-		IsDoor_L_AtEndStop = true;
+	if (Mot_L_Current > Mot_L_Current_Limit){
+		IsDoor_L_Blocked = true;
 	}
 }
 
@@ -209,7 +286,7 @@ void debugFlags() {
 	unsigned int flagmap = 0;
 	flagmap = ((IsDoorOpening) | (IsCurrentOverloaded << 1) | (IsDoorBlocked << 2) | (IsDoorAtEndStop << 3) | (IsButtonNeedsProcessing << 4) | (IsButtonReleased << 5) | (IsMotorSpeedUpdated << 6) | (IsJumper1Active << 7) | (IsJumper2Active << 8)  );
 	flagmap = flagmap + (1 << 9);	// eine führende '1' ergänzen, damit die binäre Ausgabe immer die gleiche Länge hat
-	Serial.print (";\t flags:");
+	Serial.print (F(";\t flags:"));
 	Serial.print (flagmap, BIN);
-	Serial.print (" (Jum2-Jum1-SpdUpd-ButtRel-ButtPro-EndStp-Blk-Ovl-Opng);");
+	Serial.print (F(" (Jum2-Jum1-SpdUpd-ButtRel-ButtPro-EndStp-Blk-Ovl-Opng);"));
 }

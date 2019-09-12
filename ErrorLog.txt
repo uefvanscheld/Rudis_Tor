@@ -1,0 +1,10 @@
+Offenen Fehler:
+
+a)	In der Testphase 2 scheint der linke Motor gar nicht gestartet zu werden: die LED bleibt dunkel !!!
+	--> kein Problem; der linke Motor wird bei dem Test gar nicht benutzt
+
+b)	Am Ende der Phase 2 wird anscheinend der rechte Motor nicht abgeschaltet
+	--> erledigt !!
+	
+c)	während der Phase 1 werden  der linke und der rechte Motor gar nicht angesteuert (LED bleibt dunkel)
+
