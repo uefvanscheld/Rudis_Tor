@@ -258,8 +258,97 @@ void loop() {
 			}
 
 		break;	// end of PHASE3_TESTING
-
-		default:
+		case PHASE3_DONE:
+			if(IsButtonNeedsProcessing) {			// der nächste Knopfdruck startet die Phase 4
+				state = PHASE4_TESTING;				// neuer Status: PHASE4_TESTING
+				execEnterStatePHASE4_CLOSING();
+				IsButtonNeedsProcessing = false;	// Tastendruck wurde bearbeitet
+			}
+		break;
+		case PHASE4_CLOSING:								// die Tests erfolgen nur mit dem rechten Tor
+			// zunächst das rechte Tor schließen, bis der Motor durch Loslassen der Taste gestoppt wird
+			log_PWM_CURRENT_R();
+			if(IsButtonNeedsProcessing) {					// solange die Taste gedrückt bleibt, nichts tun und den rechten Motor weiter laufen lassen
+				IsButtonNeedsProcessing = false;			// Tastendruck wurde bearbeitet
+			}
+			else {					// wenn die Taste losgelassen wurde: stoppen der Motoren
+				fastStopMotor_R();							// stop MOTOR R
+				fastStopMotor_L();							// stop MOTOR L
+				Serial.println(F("Motor gestoppt; nun beginnt die Suche nach der maximalen unbeschleunigten Startgeschwindigkeit ... "));	// und ausgeben
+				state = PHASE4_TESTING;						// neuer Status: PHASE2_DONE
+				execEnterStatePHASE4_TESTING();					
+				IsButtonNeedsProcessing = false;			// Tastendruck wurde bearbeitet
+			}
+		break;
+		case PHASE4_TESTING:								// die Tests erfolgen nur mit dem rechten Tor
+			// nun das rechte Tor mit zunehmend höheren PWM ohne Beschleunigung starten, bis die Überlasterkennung anspricht
+			// dabei jedesmal die Richtung wechseln
+			log_PWM_CURRENT_R();
+			check_is_motor_R_overloaded();		// Überlasterkennung für den rechten Motor abfragen
+			// falls überlastet ...
+			if (IsCurrent_R_Overloaded) {
+				Serial.print(F("Überlastung des rechten Motors erkannt bei PWM-Wert"));
+				Serial.println(PWM_max_non_blocking);
+				IsCurrent_R_Overloaded = false;
+				fastStopMotor_R();							// stop MOTOR R
+				PWM_Motor_R = 0;
+				sendSyncImpuls(); 							// Fehlerstatus zurücksetzen
+				state = PHASE4_DONE;						// neuer Status: PHASE2_DONE
+				execEnterStatePHASE4_DONE();					
+			}
+			// die Überstromerkennung hat NICHT angesprochen
+			if ((timestamp > nextTimer_Motor_R_Event) && (PWM_Motor_R != 0)) {
+				fastStopMotor_R();							// stop MOTOR R
+				PWM_Motor_R = 0;
+				Serial.println(F("Überlasterkennung hat nicht angesprochen; 8Sek Pause zum Ausschwingen des Tores...."));
+				// Tor ausschwingen lassen
+				nextTimer_Motor_R_Event = timestamp + PWM_max_non_blocking_pause;
+			}
+			// ... wenn das Tor ausgeschwungen hat, dann neuen Versuch starten
+			else if ((timestamp > nextTimer_Motor_R_Event) && (PWM_Motor_R == 0)) {
+				IsDoorOpening = !IsDoorOpening;		// Drehrichtung wechseln
+				PWM_max_non_blocking = PWM_max_non_blocking + PWM_max_non_blocking_inc;		// PWM-Wert erhöhen
+				PWM_Motor_R = PWM_max_non_blocking;
+				Serial.print(F("Nächster Versuch mit PWM-Wert: "));	// und ausgeben
+				Serial.println(PWM_Motor_R);
+				startMotor_R(PWM_Motor_R, IsDoorOpening);			// Start von  MOTOR R ohne Beschleunigung
+				nextTimer_Motor_R_Event = timestamp + PWM_max_non_blocking_duration;
+			}
+		break;
+		case PHASE4_DONE:
+			if(IsButtonNeedsProcessing) {			// der nächste Knopfdruck startet die Phase 5
+				state = PHASE5_CLOSING;				// neuer Status: PHASE5_TESTING
+				execEnterStatePHASE5_CLOSING();
+				IsButtonNeedsProcessing = false;	// Tastendruck wurde bearbeitet
+			}
+		break;
+		case PHASE5_CLOSING:
+			// beide Tore werden gerade geöffnet
+			if (!(IsDoor_R_AtEndStop && IsDoor_L_AtEndStop)) {	// solange noch nicht beide Motoren am Anschlag sind
+				if (IsDoor_R_Blocked) {							// falls der rechte Motor blockiert ist, stoppen
+					fastStopMotor_R();
+					if (!IsDoor_R_AtEndStop) Serial.println (F("Start Phase 5: Das rechte Tor hat jetzt den Anschlag erreicht (PHASE5_CLOSING)...."));
+					IsDoor_R_AtEndStop = true;
+				}
+				if (IsDoor_L_Blocked) {							// falls der linke Motor blockiert ist, stoppen
+					fastStopMotor_L();
+					if (!IsDoor_L_AtEndStop) Serial.println (F("Start Phase 5: Das linke Tor hat jetzt den Anschlag erreicht (PHASE5_CLOSING)...."));
+					IsDoor_L_AtEndStop = true;
+				}
+			}
+			else if(IsButtonNeedsProcessing) {					// ... oder	falls die Taste gedrückt wurde, beide Motoren stoppen
+				state = STOPPED;								// neuer Status: STOPPED
+				execEnterStateSTOPPED();		
+				IsButtonNeedsProcessing = false;				// Tastendruck wurde bearbeitet
+			}
+			else if(IsDoor_R_AtEndStop && IsDoor_L_AtEndStop){	// wenn beide Tore geschlossen sind, dann Testprogramm beenden
+				Serial.println (F("Phase 5: Beide Tore sind nun geschlossen"));
+				state = PHASE5_DONE;							// neuer Status: PHASE1_TESTING
+				execEnterStatePHASE5_DONE();
+			}
+		break;
+		
+		default:	
 
 		break;
 	}

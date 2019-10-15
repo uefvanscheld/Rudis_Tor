@@ -7,4 +7,6 @@ b)	Am Ende der Phase 2 wird anscheinend der rechte Motor nicht abgeschaltet
 	--> erledigt !!
 	
 c)	während der Phase 1 werden  der linke und der rechte Motor gar nicht angesteuert (LED bleibt dunkel)
+	--> Erledigt
+	
 

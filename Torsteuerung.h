@@ -60,8 +60,8 @@
 #define  H_Br_L_A       4 	//H-Brücke Links Auf
 #define  H_Br_L_Z       5 	//H-Brücke Links Zu
 #define  Rst_I_Stopp    10 	//Reset Stromabschaltung
-#define  H_Br_R_En      11 	//H-Brücke Motor Rechts Enable
-#define  H_Br_L_En      9 	//H-Brücke Motor Links Enable
+#define  H_Br_R_En      11 	//H-Brücke Motor Rechts Enable;	dieser Ausgang erzeugt das PWM-Signal für den rechten Motor
+#define  H_Br_L_En      9 	//H-Brücke Motor Links Enable;	dieser Ausgang erzeugt das PWM-Signal für den linken Motor
 #define  Warnleuchte    13 	//Warnleuchte an
 
 
@@ -142,7 +142,12 @@ enum state_list {	INITIALIZED, 		// 0
 					PHASE2_DONE,		// 5
 					PHASE3_TESTING,		// 6
 					PHASE3_DONE,		// 7
-					STOPPED				// 8
+					PHASE4_CLOSING,		// 8
+					PHASE4_TESTING,		// 9
+					PHASE4_DONE,		// 10
+					PHASE5_CLOSING,		// 11
+					PHASE5_DONE,		// 12
+					STOPPED				// 13
 				};
 
 // create instance and initialize
@@ -179,7 +184,7 @@ typedef struct
 
 }  state_params;
 
-state_params parameter[9] = {
+state_params parameter[14] = {
 	// Target	|Target		|Status,|Blockier-	|Flash,	|Flash	|Flash	|Speed	|Speed	|Speed	|Speed
 	// Speed R,	|Speed L,	|Dauer,	|strom-		| On 	| Off	|Count	|IntVal |IntVal |Step   |Step
 	// (0.255),	|(0.255),	|[ms] ,	|stärke,	| [ms],	| [ms],	|	    | Re    | Li    | Re    | Li
@@ -191,7 +196,12 @@ state_params parameter[9] = {
 	{ 	0,		0,	 		0,		0,			1000,	1000,	0,		0,		0,		0,		0,			},		// #5 == PHASE2_DONE,		
 	{ 	0,		0,	 		0,		290,		200,	800,	0,		100,	100,	10,		10,			},		// #6 == PHASE3_TESTING,		
 	{ 	0,		0,	 		0,		0,			1000,	1000,	0,		0,		0,		0,		0,			},		// #7 == PHASE3_DONE			
-	{ 	0,		0,	 		0,		0,			300,	300,	0,		0,		0,		0,		0,			},		// #8 == STOPPED			
+	{ 	150,	0,	 		0,		290,		200,	800,	0,		100,	0,		10,		0,			},		// #8 == PHASE4_CLOSING,			
+	{ 	0,		0,	 		0,		0, 			200,	400,	0,		0,		0,		0,		0,			},		// #9 == PHASE4_TESTING,			
+	{ 	0,		0,	 		0,		0,			1000,	1000,	0,		0,		0,		0,		0,			},		// #10 == PHASE4_DONE,			
+	{ 	190,	190, 		0,		290,		400,	800,	0,		100,	100,	10,		10,			},		// #11 == PHASE5_CLOSING,			
+	{ 	0,		0,	 		0,		0,			1000,	1000,	0,		0,		0,		0,		0,			},		// #12 == PHASE5_DONE,			
+	{ 	0,		0,	 		0,		0,			300,	300,	0,		0,		0,		0,		0,			},		// #13 == STOPPED			
 };                                                                                                                               
 
 
@@ -235,4 +245,10 @@ byte	PWM_runtime = 0;						// PWM-Startwert, mit dem die Tests für die Laufzeit
 byte	PWM_runtime_inc = 10;					// PWM-Wert, um den die Geschwindigkeit jeweils erhöht wird
 boolean	Runtime_Direction_Opening = true;		// Richtung der Torbewegung: true --> Tor wird geöffnet
 
+// Phase 4 - Variablen
+byte	PWM_max_non_blocking = 0;						// max. PWM-Wert, ab dem der Motor ohne Überlastung direkt starten kann
+byte	PWM_max_non_blocking_start = 50;				// Startwert für den PWM-Wert, 
+byte	PWM_max_non_blocking_inc = 10;					// Inkrement für den PWM-Wert 
+unsigned long	PWM_max_non_blocking_duration = 1500;	// Dauer [msec], für die der aktuelle PWM-Wert aufrecht erhalten werden soll
+unsigned long	PWM_max_non_blocking_pause = 8000;		// Zeit [msec], in der das Tor nach einem Stoppen auspendeln kann 
 

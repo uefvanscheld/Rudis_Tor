@@ -1,0 +1,12 @@
+Start Phase 2: Ermittlung des minimalen PWM-Werts für eine Torbewegung des RECHTEN Tores beginnt (PHASE2_TESTING)....
+Startwert für PWM: 0
+Neuer PWM-Wert: 10
+Neuer PWM-Wert: 20
+Neuer PWM-Wert: 30
+Neuer PWM-Wert: 40
+Neuer PWM-Wert: 50
+Der minimale PWM-Wert um ein Tor zu bewegen beträgt: 50
+Phase 2 abgeschlossen !
+****************************************************************************************
+
+Taste drücken, um Phase 3 zu starten.

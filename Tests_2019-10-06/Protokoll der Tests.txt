@@ -1,0 +1,93 @@
+Temperatur während der Messungen lag bei ca. 11,5 °C am Küchenfenster vor der Garage. Bei den Motoren wahrscheinlich etwas wärmer.
+
+
+Test 1:
+
+lief wie geplant bis auf Phase 4
+
+Das Tore hat sich beim ersten Drücken der Taste nicht geschlossen.
+Erneutes Drücken hat den Testlauf hin und her Phase 4 gestartet.
+Das Tor war ca. 1/2 m vom Anschlag entfernt und ist auch während des Tests nicht gegen den Anschlag gelaufen. Es waren noch ca. 3 cm Luft.
+Es wurde keine Hardwareabschaltung registriert bzw. die Hardwareabschaltung hat nicht angesprochen. Wir haben bei der Bewegung des Tores auch kein Stoppen durch die Hardwareabschaltung erkennen können
+Test ist über PWM 250 hinausgelaufen, 255 ist nicht getestet worden. Nach dem Überlauf ist aber der Wert 254 erreicht worden.
+Nach dem zweiten Überlauf haben wir Reset gedrückt, damit die Werte im Monitor erhalten blieben.
+
+
+Test 2:
+
+lief wie geplant bis auf Phase 3
+
+Der Anschlag beim ersten Zufahren wurde nicht mehr erkannt.
+Die Stromstärke hat den Wert von 290 nicht mehr überschritten.
+
+Test durch erneutes Drücken der Taste abgebrochen.
+
+
+Test 3:
+
+lief wie geplant bis auf Phase 3
+
+Der Anschlag beim ersten Zufahren wurde wieder nicht erkannt.
+Die Stromstärke hat den Wert von 290 nicht mehr überschritten.
+(Vielleicht bedingt durch die Erwärmung des Motors)
+
+Test durch erneutes Drücken der Taste abgebrochen.
+
+
+Test 4:
+
+Blockierstromstärke von dem ursprünglichen Wert 290 auf 240 für alle Phasen geändert
+
+lief bis Phase 4
+
+In Phase 1 wurde jetzt schon bei einem PWM von 160 die Blockierstromstärke erkannt. Zuvor bei PWM 170.
+
+In Phase 3 wurde ab einem PWM von 250 die Blockierströmstärke von 240 schon zu früh erkannt. Das Tor hat sich nicht mehr bewegt.
+Der Stromverlauf ist trotzdem etwas eigenartig da zwischenzeitlich Stromstärken <100 wie im Normalbetrieb erreicht wurden die aber nach kurzer Zeit wieder anstiegen.
+Wir haben es leider versäumt zu prüfen, ob das Tor durch irgendwas mechanisch blockiert war, weil wir zunächst Phase 4 mit dem anderen Tor getestet haben.
+
+In Phase 4 hat sich das Tor beim ersten Drücken der Taste nicht geschlossen.
+Wir haben das Tor manuell ca. in die Mitte gestellt.
+Erneutes Drücken hat den Testlauf hin und her Phase 4 gestartet.
+Es wurde keine Hardwareabschaltung registriert.
+Test ist über PWM 250 hinausgelaufen, 255 ist nicht getestet worden.
+Nach dem Überlauf haben wir Reset gedrückt, damit die Werte im Monitor erhalten blieben.
+
+---------------------------------------------------------------------------------------------------------------------------------------------------
+
+Phase 1: Beide Tore öffnen dann Ermittlung des minimalen PWM-Wertes, der zur Erkennung des Blockierstroms erforderlich ist (aus dem Stillstand heraus !)
+Phase 2: Ermittlung des minimalen PWM-Wertes, mit dem sich das RECHTE Tor bewegen lässt
+Phase 3: Messung der Zeiten für das Öffnen und Schließen des LINKEN Tores mit unterschiedlichen Geschwindigkeiten (=PWM-Werten)
+Phase 4: Ermittlung des maximalen PWM-Wertes, bei dem der Motor des RECHTEN Tores aus dem Stand heraus beschleunigen kann, ohne dass die Hardware-Überlasterkennung anspricht
+Phase 5: Nach Abschluss der Phase 4 sollen beide Tore zeitversetzt geschlossen werden, um wieder den ursprünglichen Zustand von vor dem Testprogramm herzustellen 
+
+
+Überlegungen:
+
+Hardware-Schwellwert für die Stromabschaltung REF.1 und 2, 5V / 7,2 *3,3 = 2,29 V
+
+Werte im Nano
+Stromabschaltung gemessen aus 1 Phase 1 , Stromstärke 299. Diese entspricht 5V / 1024 * 299 = 1,46V
+Strommessung aus 3 Phase 3 am Ende max. 268. Diese entspricht 5V / 1024 * 268 = 1,31V
+
+Hardware-Abschaltung ist wahrscheinlich nur zum Schutz der Hardware/Endstufen
+
+Im Programm, Datei Torsteuerung.h gibt es eine Tabelle "state_params" die auch den Parameter "Blockierstromstärke" für die verschiedenen Phasen enthält.
+Die Blockierstromstärke war ursprünglich auf 290 und ich habe sie jetzt mal für den 4. Test auf 240 gesetzt.
+Die Hardware-Abschaltung spricht nach den oben berechneten Werten theoretisch bei einer Stromstärke von 467 an.
+
+
+Anmerkungen:
+
+rechtes Tor soll sich 6 s (ca. 1 m) vor dem Linken öffnen.
+linkes Tor muss sich 6 s eher schließen als das rechte. Dann haben die Tore vor dem Schließen noch einen Abstand von ca. 0,5m.
+D. h. das rechte Tor schließt etwas schneller als das Linke.
+
+
+Ideen falls weiter Tests notwendig sind:
+
+Phase 4 direkt zu Beginn durchführen, kalter Motor scheint der kritischere Fall zu sein.
+Falls es vom Aufwand zu vertreten ist, wäre es gut wenn man eine Phase manuell wiederholen könnte falls während dessen ein Problem aufgetreten ist. (z.B. mit der zweiten Taste)
+Phase 4 das Fahren des Tores zur Mitte funktioniert nicht, kann aber auch manuell dort hin gestellt werden
+Phase 4 Überlauf des PWM-Wertes verhindern, 255 auch testen
+Phase 3 Blockierstromstärke von 290 ist zu groß, 240 ist zu klein. Gute ideen sind gefragt.

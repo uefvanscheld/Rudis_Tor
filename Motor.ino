@@ -166,6 +166,33 @@ void startMotor_L_Tests(int pmw_val_target, boolean opening) {
 }
 
 
+/*
+ *	Neue Funktion für die Version 0.97 (Testfahrten)
+ *	
+ *	der Parameter pmw_val wird in dieser Version als Zielgeschwindigkeit für diesen Start des Motors interpretiert
+ *	Dies ist für die Phase 4 (Messung des maximalen Start-PWM-Wertes ohne Überlastung) erforderlich
+ *
+ */
+
+void startMotor_R_Tests(int pmw_val_target, boolean opening) {
+	digitalWrite(H_Br_R_En, LOW);	// stop the PWM signal to prevent confusion
+	sendSyncImpuls();				// sende SYNC-Impuls
+	IsMotor_R_Ramping = false;
+
+	// jetzt die Drehrichtung des Motors einstellen
+	if(opening) {			// Rechtes Tor öffnen
+		digitalWrite(H_Br_R_Z, LOW);		// Motor_R (-) auf Masse legen
+		digitalWrite(H_Br_R_A, HIGH);		// Motor_R (+) auf Vcc legen
+	}
+	else {					// Rechtes Tor schließen
+		digitalWrite(H_Br_R_A, LOW);		// Motor_R (+) auf Masse legen
+		digitalWrite(H_Br_R_Z, HIGH);		// Motor_L (-) auf Vcc legen
+	}
+	// Motor jetzt mit der derzeit aktuellen Geschwindigkeit (PWM-Signal) starten
+	analogWrite(H_Br_R_En, (int)pmw_val_target);
+}
+
+
 void updateMotorSpeed(byte pmw_val) {
 	// keine Änderung bzgl. Drehrichtung etc.
 	// beide Motoren erhalten die gleiche Geschwindigkeit

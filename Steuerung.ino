@@ -197,15 +197,110 @@ void execEnterStatePHASE3_TESTING()  {
 }
 
 //
-// next lines are related to state PHASE2_DONE
+// next lines are related to state PHASE3_DONE
 //
 void execEnterStatePHASE3_DONE()  {
 	initializeFlashLightNewState(state);		// Warnlampe auf den neuen Status einstellen
 	Serial.println(F("Phase 3 abgeschlossen !"));
 	Serial.println(F("****************************************************************************************"));
-	Serial.println(F("Alle Testphasen durchlaufen."));
+	Serial.println(F("Für den Start der Phase 4 jetzt bitte die Taste SO LANGE GEDRÜCKT HALTEN, bis sich das rechte Tor etwa auf der Hälfte des Weges befindet."));
+
 }
 
+//
+// next lines are related to state PHASE4_CLOSING
+//
+void execEnterStatePHASE4_CLOSING()  {
+	// jetzt erstmal auf den Tastdruck warten, damit die Phase und das Tor gestartet werden
+	IsButtonNeedsProcessing = false;
+	do
+	{
+		get_button_state();
+	} while (IsButtonNeedsProcessing == false);
+	// Taste wurde gedrückt; nun das rechte Tor schließen, solange die Taste gedrückt bleibt
+	Serial.println (F("Start Phase 4: Ermittlung des maximalen PWM-Werts, mit dem ein Motor aus dem Stand ohne Überlastung gestartet werden kann, beginnt (PHASE4_TESTING)...."));
+	initializeFlashLightNewState(state);		// Warnlampe auf den neuen Status einstellen
+	IsDoor_R_Blocked = false;
+	IsDoor_L_Blocked = false;
+	IsCurrent_R_Overloaded	= false;			// Hardware-Strombegrenzung für den rechten Motor hat nicht angesprochen
+	IsCurrent_L_Overloaded	= false;			// Hardware-Strombegrenzung für den linken Motor hat nicht angesprochen
+
+	PWM_Motor_R = 0;							// beide Motoren ausschalten
+	PWM_Motor_L = 0;							// beide Motoren ausschalten
+	PWM_min_moving = PWM_Motor_R;				// Startwert in Variable für den minimalen PWM-Wert übernehmen
+	Serial.print(F("Startwert für PWM: "));		// und ausgeben
+	Serial.println(PWM_min_moving);
+
+	startMotor_R(PWM_Motor_R, CloseDoor);		// Start von  MOTOR R
+
+}
+
+//
+// next lines are related to state PHASE4_TESTING
+//
+void execEnterStatePHASE4_TESTING()  {
+	IsDoorOpening = CloseDoor;
+	// Taste wurde gedrückt; nun das rechte Tor schließen, solange die Taste gedrückt bleibt
+	// Serial.println (F("Start Phase 4: Ermittlung des maximalen PWM-Werts, mit dem ein Motor aus dem Stand ohne Überlastung gestartet werden kann, beginnt (PHASE4_TESTING)...."));
+	initializeFlashLightNewState(state);		// Warnlampe auf den neuen Status einstellen
+	IsDoor_R_Blocked = false;
+	IsDoor_L_Blocked = false;
+	IsCurrent_R_Overloaded	= false;					// Hardware-Strombegrenzung für den rechten Motor hat nicht angesprochen
+	IsCurrent_L_Overloaded	= false;					// Hardware-Strombegrenzung für den linken Motor hat nicht angesprochen
+		
+	PWM_Motor_R = 0;									// beide Motoren ausschalten
+	PWM_Motor_L = 0;									// beide Motoren ausschalten
+	PWM_Motor_R = PWM_max_non_blocking_start;			// Startwert in Variable für den minimalen PWM-Wert übernehmen
+	PWM_max_non_blocking = PWM_max_non_blocking_start;	// Startwert merken
+	Serial.print(F("Startwert für PWM: "));				// und ausgeben
+	Serial.println(PWM_Motor_R);
+	delay(PWM_max_non_blocking_pause);
+	startMotor_R(PWM_Motor_R, IsDoorOpening);			// Start von  MOTOR R ohne Beschleunigung
+	nextTimer_Motor_R_Event = millis() + PWM_max_non_blocking_duration;
+}
+
+//
+// next lines are related to state PHASE4_DONE
+//
+void execEnterStatePHASE4_DONE()  {
+	initializeFlashLightNewState(state);		// Warnlampe auf den neuen Status einstellen
+	Serial.println(F("Phase 4 abgeschlossen !"));
+	Serial.println(F("****************************************************************************************"));
+	Serial.println();
+	Serial.println(F("Taste drücken, um Phase 5 zu starten."));
+}
+
+
+void execEnterStatePHASE5_CLOSING()  {
+	Serial.println (F("Zum Abschluss werden jetzt beide Tore geschlossen..."));
+	initializeFlashLightNewState(state);		// Warnlampe auf den neuen Status einstellen
+	IsDoor_R_Blocked = false;
+	IsDoor_L_Blocked = false;
+	IsCurrent_R_Overloaded	= false;			// Hardware-Strombegrenzung für den rechten Motor hat nicht angesprochen
+	IsCurrent_L_Overloaded	= false;			// Hardware-Strombegrenzung für den linken Motor hat nicht angesprochen
+
+	PWM_Motor_R_Target = parameter[state].Motor_R_Speed_Target;	// Zielgeschwindigkeit ermitteln
+	PWM_Motor_L_Target = parameter[state].Motor_L_Speed_Target;	// Zielgeschwindigkeit ermitteln
+
+	PWM_Motor_R = 0;							// beide Motoren ausschalten
+	PWM_Motor_L = 0;							// beide Motoren ausschalten
+
+	initializeFlashLightNewState(state);		// Warnlampe auf den neuen Status einstellen
+
+	startMotor_R(PWM_Motor_R, CloseDoor);		// start MOTOR R
+	startMotor_L(PWM_Motor_L, CloseDoor);		// start MOTOR L
+
+}
+
+
+//
+// next lines are related to state PHASE5_DONE
+//
+void execEnterStatePHASE5_DONE()  {
+	initializeFlashLightNewState(state);		// Warnlampe auf den neuen Status einstellen
+	Serial.println(F("Testprogramm komplett abgeschlossen !"));
+	Serial.println(F("****************************************************************************************"));
+}
 
 //
 // next lines are related to state BLOCKED
@@ -245,6 +340,7 @@ void execEnterStateSTOPPED()  {
 	fastStopMotor_R();			// stop MOTOR R
 	fastStopMotor_L();			// stop MOTOR L
 	initializeFlashLightNewState(state);	// Warnlampe auf den neuen Status einstellen
+	Serial.println (F("Die Tore wurden durch einen Tastendruck gestoppt."));
 	IsDoorOpening = !IsDoorOpening;	// Drehrichtung der Motoren ändern
 }
 
@@ -268,6 +364,17 @@ void log_PWM_CURRENT() {
 	Serial.print (analogRead(Strom_L));
 	Serial.print (F(";\t Stromstärke (vorheriger Wert): "));
 	Serial.print (Mot_L_Current);
+    Serial.println (F(""));
+}
+
+void log_PWM_CURRENT_R() {
+	Serial.print (timestamp);
+	Serial.print (F(":\t PWM(R): "));
+	Serial.print (PWM_Motor_R);
+	Serial.print (F(";\t aktuelle Stromstärke: "));
+	Serial.print (analogRead(Strom_R));
+	Serial.print (F(";\t Stromstärke (vorheriger Wert): "));
+	Serial.print (Mot_R_Current);
     Serial.println (F(""));
 }
 

@@ -7,6 +7,8 @@ Das Programm der Testfahrten gliedert sich in drei Phasen mit unterschiedlichen 
 Phase 1: Ermittlung des minimalen PWM-Wertes, der zur Erkennung des Blockierstroms erforderlich ist (aus dem Stillstand heraus !)
 Phase 2: Ermittlung des minimalen PWM-Wertes, mit dem sich ein Tor bewegen lässt
 Phase 3: Messung der Zeiten für das Öffnen und Schließen der Tore mit unterschiedlichen Geschwindigkeiten (=PWM-Werten)
+Phase 4: Ermittlung des maximalen PWM-Wertes, bei dem ein Motor ein Tor aus dem Stand heraus beschleunigen kann, ohne dass die Überlasterkennung anspricht
+Phase 5: Nach Abschluss der Phase 4 sollen beide Tore zeitversetzt geschlossen werden, um wieder den ursprünglichen Zustand von vor dem Testprogramm herzustellen 
 < 
 nicht implementiert in V 0.97:
 Phase 4: Messung eines Stromwertes für das Abschalten bei einem Hindernis (kein Endanschlag, d.h. ggf. bei einer niedrigeren Stromstärke), 
@@ -92,8 +94,17 @@ d)	Phase 3:
 	linearen Zusammenhang ausgehen kann.
 	Auf Basis dieser Daten können später aus PWM-Wert und der überwachten Torlaufzeit ungefähre Geschwindigkeits- und Positionsbestimmungen 
 	der Tore ermittel und durchgeführen.
-	
-	Anschließend ist Phase 3 beendet und damit das gesamte Testprogramm.
+
+e)	Phase 4:
+	Hierbei soll ermittelt werden, bis zu welchem maximalen PWM-Wert ein Motor aus dem Stand heraus gestartet werden kann, ohne dass die Überlasterkennung anspricht.
+	Dieser Test wird mit dem rechten Motor durchgeführt.
+	Dazu wird zu Beginn der Phase das Tor so lange geschlossen, wie die Taste gedrückt wird; das Tor sollte nach dem Loslassen der Taste etwa auf der Hälfte des Weges stehen.
+	Danach wird in einer Schleife der Motor mit einem PWM-Wert für 1,5sec gestartet und während dieser Zeit laufend die Überlasterkennung abgefragt.
+	Hat diese bis zum Ende der Zeitspanne nicht angesprochen, wird der Motor gestoppt und erhält >5sec Zeit, damit sich das Tor wieder mechanisch beruhigen kann.
+	Dann startet der Vorgang erneut mit dem nächst höheren PWM-Wert. Dies wird so lange wiederholt, bis die Überlasterkennung anspricht.
+	Als PWM-Startwert wird 50 gewählt, um in jedem Fall die maximalen Werte genau ermitteln zu können.
+
+	Anschließend ist Phase 5 beendet und damit das gesamte Testprogramm.
 	Den Abschluss dieser Phase zeigt das folgende Signal an: Blinken im folgenden Rythmus: 1 sec an, 1 sec aus.
 	
 	
