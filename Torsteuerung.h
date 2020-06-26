@@ -133,8 +133,29 @@ boolean IsMotor_L_Ramping = false;		// Flag, das anzeigt, ob sich der Motor gera
 boolean IsMotor_R_SpeedingUp = false;	// Flag, das anzeigt, ob der Motor gerade beschleunigt (=true) oder abbremst (=false)
 boolean IsMotor_L_SpeedingUp = false;	// Flag, das anzeigt, ob der Motor gerade beschleunigt (=true) oder abbremst (=false)
 
+// some definitions required to handle test programs
+byte numTestProgramms = 6;					// die Anzahl der auswählbaren Testprogramme
+// list of available test programs
+enum test_progs {	ABORT, 				// 0
+					BLOCKCURRENT,		// 1
+					MINMOVEPWM,			// 2		
+					MOVETIME,			// 3
+					STARTNOTBLOCKING,	// 4
+					OPENGATES,			// 5
+					CLOSEGATES			// 6
+				};
+test_progs activeTestProgramm;					// ausgewähltes Testprogramm
+boolean bootInitDone = false;					// keep track if device was  
+
+
+byte operationMode = 0;						// normal operation is default
+// two operation modes: normal usage or test/debugging
+enum opModes {	NORMAL, 		// 0
+				TESTING			// 1
+			};
+
 // possible states of the door control and their numeric equivalent
-enum state_list {	INITIALIZED, 		// 0
+enum state_list {	IDLE, 				// 0
 					PHASE1_OPENING,		// 1
 					PHASE1_TESTING,		// 2
 					PHASE1_DONE,		// 3
@@ -151,7 +172,7 @@ enum state_list {	INITIALIZED, 		// 0
 				};
 
 // create instance and initialize
-state_list state = INITIALIZED;
+state_list state = IDLE;
 
 // define parameters for the different states
 typedef struct

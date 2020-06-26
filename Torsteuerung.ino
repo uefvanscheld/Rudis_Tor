@@ -58,8 +58,15 @@ void setup() {
 	test_phase = 0;						// Variable für Phasen initialisieren
 	nextTimer_Motor_L_Event = millis();	// Timer des linken Motors für des zeitversetzte Schließen vorbereiten
 	IsDoorOpening			= true;		// beide Tore werden zuerst geöffnet
+<<<<<<< Updated upstream
 	state = INITIALIZED;				// alle Werte initialisiert
 	execEnterStateINITIALIZED();
+=======
+	operationMode = TESTING;			// for now set operation mode to testing 
+	state = IDLE;						// alle Werte wurden initialisiert
+	execEnterStateIDLE();
+	
+>>>>>>> Stashed changes
 }
 
 void loop() {
@@ -112,13 +119,36 @@ void loop() {
 			Serial.println(PWM_min_moving);
 		}
 	}
+<<<<<<< Updated upstream
 	if (IsMotor_L_Ramping && (timestamp >= nextTimer_Motor_L_Event)) {
 		Update_PMW_Motor_L();
 	}
 
+=======
+	
+/* 	Serial.print (F("Vor Motor_L update PWM-Wert: "));
+	Serial.print (PWM_Motor_L);
+	Serial.print (F(";\t timestamp: "));
+	Serial.print (timestamp);
+	Serial.print (F(";\t nextTimer_Motor_L_Event: "));
+	Serial.print (nextTimer_Motor_L_Event);
+	Serial.println (F(""));	
+	if (IsMotor_L_Ramping && (timestamp >= nextTimer_Motor_L_Event)) {
+		Update_PMW_Motor_L();
+	}
+	Serial.print (F("Nach Motor_L update PWM-Wert: "));
+	Serial.print (PWM_Motor_L);
+	Serial.print (F(";\t timestamp: "));
+	Serial.print (timestamp);
+	Serial.print (F(";\t nextTimer_Motor_L_Event: "));
+	Serial.print (nextTimer_Motor_L_Event);
+	Serial.println (F(""));	
+ */
+ 
+>>>>>>> Stashed changes
 	/*
 	*
-	*	nun die Ereignisse bzw. Zustände auswerten und entsprechende Statusübergänge auslösung
+	*	nun die Ereignisse bzw. Zustände auswerten und entsprechende Statusübergänge auslösen
 	*
 	*/
 
@@ -127,13 +157,22 @@ void loop() {
 	debugFlags();
 */
 	switch (state) {
-		case INITIALIZED:
+		case IDLE:
+			if (operationMode == TESTING) {
+					activeTestProgramm = getTestSelection();	// select for next test program to execute
+					processTestSection(activeTestProgramm);		// ... and take related actions ...
+			}
+			else {
+				// do nothing in case of normal operation ???
+				// just wait for a push button event to happen
+			}
+/* 
 			if(IsButtonNeedsProcessing) {			// System ist initialisiert; ein Knopfdruck startet das Öffnen beider Tore
 				state = PHASE1_OPENING;				// neuer Status: PHASE1_OPENING
 				execEnterStatePHASE1_OPENING();
 				IsButtonNeedsProcessing = false;	// Tastendruck wurde bearbeitet
 			}
-			// execEnterStateINITIALIZED();
+ */			
 		break;
 		case PHASE1_OPENING:
 			// beide Tore werden gerade geöffnet
@@ -179,16 +218,14 @@ void loop() {
 				fastStopMotor_L();												// Motor sofort ausschalten
 				Serial.print(F("Blockierstromstärke erkannt; der erforderliche PWM-Wert dafür beträgt: "));
 				Serial.println(PWM_min_blocking);
-				state = PHASE1_DONE;											// neuer Status: PHASE1_DONE
-				execEnterStatePHASE1_DONE();
+				state = PHASE1_DONE;						// neuer Status: PHASE1_DONE
+				execEnterStatePHASE1_DONE();					
 			}
 		break;
 		case PHASE1_DONE:
-			if(IsButtonNeedsProcessing) {			// der nächste Knopfdruck startet die Phase 2
-				state = PHASE2_TESTING;				// neuer Status: PHASE2_TESTING
-				execEnterStatePHASE2_TESTING();
-				IsButtonNeedsProcessing = false;	// Tastendruck wurde bearbeitet
-			}
+			state = IDLE;						// neuer Status: IDLE
+			execEnterStateIDLE();
+			IsButtonNeedsProcessing = false;	// Tastendruck wurde bearbeitet
 		break;
 		case PHASE2_TESTING:								// die Tests erfolgen nur mit dem rechten Tor
 			if(IsButtonNeedsProcessing) {					// wenn die Taste gedrückt wurde, wurde eine Bewegung erkannt und der rechte Motoren wird gestoppt

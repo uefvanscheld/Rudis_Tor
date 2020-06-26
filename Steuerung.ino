@@ -31,14 +31,25 @@ void execEnterStateOPENING()  {
 void execEnterStateINITIALIZED()  {
 	initializeFlashLightNewState(state);		// Warnlampe auf den neuen Status einstellen
 	Serial.println(F("Initalisierung abgeschlossen !"));
-	Serial.println(F("****************************************************************************************"));
-	Serial.println(F("Taste drücken, um Phase 1 zu starten."));
+	
+}
+
+//
+// next lines are related to state IDLE
+//
+void execEnterStateIDLE()  {
+	initializeFlashLightNewState(state);		// Warnlampe auf den neuen Status einstellen
+	Serial.println(F("System ab jetzt im Wartezustand ..."));
+	
 }
 
 //
 // next lines are related to state PHASE1_OPENING
 //
 void execEnterStatePHASE1_OPENING()  {
+	Serial.println(F("****************************************************************************************"));
+	Serial.println(F("Taste drücken, um Phase 1 zu starten."));
+
 	IsDoor_R_Blocked = false;
 	IsDoor_L_Blocked = false;
 
@@ -137,11 +148,9 @@ void execEnterStatePHASE1_TESTING()  {
 //
 void execEnterStatePHASE1_DONE()  {
 	initializeFlashLightNewState(state);		// Warnlampe auf den neuen Status einstellen
-	Serial.println(F("Phase 1 abgeschlossen !"));
+	Serial.println(F("Testprogramm 1 abgeschlossen !"));
 	Serial.println(F("****************************************************************************************"));
 	Serial.println();
-	Serial.println(F("Taste drücken, um Phase 2 zu starten."));
-	Serial.println(F("Sobald sich nach Beginn der Phase 2 das rechte Tor bewegt, bitte die Taste betätigen !!"));
 }
 
 //
@@ -353,6 +362,43 @@ void execEnterStateOPENED() {
 	initializeFlashLightNewState(state);	// Warnlampe auf den neuen Status einstellen
 	IsDoorOpening = !IsDoorOpening;			// Drehrichtung der Motoren ändern
 }
+
+
+/* 
+take selected test programm and move FSM into related state
+ */
+ void processTestSection(byte testToLaunch) {
+	 
+	 switch (testToLaunch) {
+		 case BLOCKCURRENT:
+			state = PHASE1_OPENING;				// neuer Status: PHASE1_OPENING
+			execEnterStatePHASE1_OPENING();
+		 break;
+		 case MINMOVEPWM:
+		 
+		 break;
+		 case MOVETIME:
+		 
+		 break;
+		 case STARTNOTBLOCKING:
+		 
+		 break;
+		 case OPENGATES:
+		 
+		 break;
+		 case CLOSEGATES:
+		 
+		 break;
+		 
+		 
+		 
+	 }
+	 
+	 
+ }
+
+
+
 //
 // next lines are related to logging PWM, current (analog input) during phase 1 testing
 //

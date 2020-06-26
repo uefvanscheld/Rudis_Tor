@@ -28,7 +28,7 @@ void initialize_FSM() {
   IsDoor_R_Blocked = false;
   IsDoor_L_Blocked = false;
 
-  state = INITIALIZED;          // Annahme: Tor ist zu Beginn geschlossen
+  state = IDLE;          // Annahme: Tor ist zu Beginn geschlossen
 }
 
 
@@ -290,3 +290,49 @@ void debugFlags() {
 	Serial.print (flagmap, BIN);
 	Serial.print (F(" (Jum2-Jum1-SpdUpd-ButtRel-ButtPro-EndStp-Blk-Ovl-Opng);"));
 }
+
+
+// read serial port and wait for user to enter a single digit
+byte getSerialDigit() {
+	char recChar = 0;
+	byte recDigit = 0;
+	// wait for something in receive buffer
+	while (Serial.available() == 0) {
+	}
+	// read character entered first
+	recChar = Serial.read();
+	recDigit = recChar - 48;		// convert single byte ASCII to unsigned byte
+	if ((recDigit > 0) && (recDigit <= 9)) {
+		return (recDigit);
+	}
+	else return (0);
+	// add here some code for error handling like "wait until a valid digit was entered or 0 to abort"
+}
+
+// Auswahlmenu mit der Liste der Testprogramme
+byte getTestSelection() {
+	byte sel;
+	
+	Serial.println(F("****************************************************************************************"));
+	Serial.println(F("Testprogramm wählen:"));
+	Serial.println();
+	Serial.println(F("1 - Ermittlung der Blockierströme für alle PWM-Wertes (am Anschlag)"));
+	Serial.println(F("2 - Ermittlung des minimalen PWM-Wertes, mit dem sich die Tore bewegen lassen"));
+	Serial.println(F("3 - Messung der Zeiten für Öffnen und Schließen beider Tore bei unterschiedlichen PWM-Werten"));
+	Serial.println(F("4 - Ermittlung max. PWM-Wertes für einen Motorstart aus dem Stand, ohne dass die Überlasterkennung anspricht"));
+	Serial.println(F("5 - Öffnen beider Tore (rechtes Tor zuerst)"));
+	Serial.println(F("6 - Schließen beider Tore (linkes Tor zuerst)"));
+	Serial.println();
+	Serial.print(F("Nummer des Programms eingeben [1.."));
+	Serial.print(numTestProgramms);
+	Serial.print(F("]:"));
+	do {
+		sel = getSerialDigit();
+	} while ((sel == 0) || (sel > numTestProgramms));
+	Serial.println();
+	Serial.print(F("Testprogram <"));
+	Serial.print(sel);
+	Serial.println(F("> wird gestartet ..."));
+	Serial.println(F("****************************************************************************************"));
+	return (sel);
+} 
