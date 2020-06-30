@@ -1,6 +1,14 @@
 /*
  * Here we define all constants and variables used in this program
  *
+ *	Version 0.98
+ *			- neue Status OPENING und CLOSING hinzugefügt
+ *			- Bezeichner für die Testprogramme ergänzt (für Auswahlmenu)
+ *			- Variable für Betriebsmodi (opModes) eingeführt
+ *			- NEU: Variable isCalledBy für die Nutzung von Sub-Status
+ *			- NEU: Variable & Konstante für die Zeitverzögerung beim Öffnen/Schließen
+ *			- 
+ *
  *  Version 0.97 (speziell angepasst für die geplanten Testfahrten mit 3 Phasen)
  *			s.a. Task auf dem Glo-Board: https://app.gitkraken.com/glo/board/W-6H0tbmZwAaeaqf/card/XIq2RPkhKgAP0kDB
  *			- Ergänzung von Variablen für die Parametrisierung und Steuerung der 3 Phasen (s. Datei-Ende)
@@ -38,6 +46,8 @@
  */
 
 // #define DEBUG			// Flag für Logging zum Debuggen
+
+#define	ProgVersion		0.98	// Versionsnummer
 
 //Eingänge digital
 #define  Start_Funk	    6 	//Start-Impuls Funkfernbedienung activ high
@@ -112,10 +122,13 @@ unsigned int flash_on_duration;				// Einschaltdauer der Signallampe im aktuelle
 unsigned int flash_off_duration;			// Ausschaltdauer der Signallampe im aktuellen Status [ms]
 
 // define variables for controlling timer events
-unsigned long	nextTimerFlashEvent;		// Variable,die den Zeitpunkt für das nächste Schalten der Signallampe enthält
-unsigned long	nextTimer_Motor_R_Event;	// Variable, die den Zeitpunkt für das nächste Schalten der Motoren enthält
-unsigned long	nextTimer_Motor_L_Event;	// Variable, die den Zeitpunkt für das nächste Schalten der Motoren enthält
-unsigned long	timestamp;					// Variable, die den aktuellen Zeitpunkt für weitere Berechnung zwischenspeichert
+unsigned long	nextTimerFlashEvent;			// Variable,die den Zeitpunkt für das nächste Schalten der Signallampe enthält
+unsigned long	nextTimer_Motor_R_Event;		// Variable, die den Zeitpunkt für das nächste Schalten der Motoren enthält
+unsigned long	nextTimer_Motor_L_Event;		// Variable, die den Zeitpunkt für das nächste Schalten der Motoren enthält
+unsigned long	nextTimer_GatesDelay_Event = 0;	// Variable für den Zeitpunkt, an dem beim Öffnen bzw. Schließen das zweite Tor gestartet 
+unsigned long	timestamp;						// Variable, die den aktuellen Zeitpunkt für weitere Berechnung zwischenspeichert
+const unsigned long	GatesDelay = 6000;			// Verzögerung in ms, mit der die Tore beim Öffnen/Schließen gestartet werden
+
 
 //PWM Duty Cycle and motor control variables
 byte  V_Motoren =   0; 						//Geschwindigkeit der Motoren 255 = 100% ---> überflüssig, wenn Beschleunigungsfunktion fertig implementiert ist
@@ -144,18 +157,37 @@ enum test_progs {	ABORT, 				// 0
 					OPENGATES,			// 5
 					CLOSEGATES			// 6
 				};
-test_progs activeTestProgramm;					// ausgewähltes Testprogramm
-boolean bootInitDone = false;					// keep track if device was  
+test_progs activeTestProgramm;				// ausgewähltes Testprogramm
+boolean bootInitDone = false;				// keep track if device was  
 
-
-byte operationMode = 0;						// normal operation is default
+byte debugLevel = 0;						// debug Level
+char message[101];							// Puffer für log Meldungen
 // two operation modes: normal usage or test/debugging
 enum opModes {	NORMAL, 		// 0
 				TESTING			// 1
 			};
+byte operationMode = NORMAL;						// normal operation is default
 
-// possible states of the door control and their numeric equivalent
-enum state_list {	IDLE, 				// 0
+/* 
+	Here are definitions for FSM
+*/
+// allow FSM to deal with sub-states
+// this is required e.g. for opening and closing the gates before proceeding with a specific test case
+// if current state find this variable with a value other than zero this means it was called by another state and should return to parent state once it finished
+// variable contains number of parent state
+// values means the following:
+// 		0:	current status is no substatus (--> no substatus executed currently)
+//		>0:	substatus is currently executed and was called by state equivalent to value
+//		-1:	substatus just finished; allows parent status to know that substatus was already called; parent state has to reset
+byte isCalledBy = 0;
+// subStateStack allows states to track completion of their substates
+// When entering a state subStateStack should be set to the number of substates to be executed during lifetime of the state
+// Once a substate returns control to parent state the parent should decrement subStateStack
+// it's in the responsibilty of the parent state to take the proper actions related to the value (which substate belongs to which value)
+byte subStateStack = 0;
+
+//	possible states of the door control and their numeric equivalent
+  enum state_list {	IDLE, 				// 0
 					PHASE1_OPENING,		// 1
 					PHASE1_TESTING,		// 2
 					PHASE1_DONE,		// 3
@@ -168,7 +200,12 @@ enum state_list {	IDLE, 				// 0
 					PHASE4_DONE,		// 10
 					PHASE5_CLOSING,		// 11
 					PHASE5_DONE,		// 12
-					STOPPED				// 13
+					OPENING,			// 13
+					CLOSING,			// 14
+					STOPPED,			// 15
+					BLOCKED,			// 16
+					OPENED,				// 17
+					OVERLOAD			// 18
 				};
 
 // create instance and initialize
@@ -205,24 +242,26 @@ typedef struct
 
 }  state_params;
 
-state_params parameter[14] = {
+state_params parameter[16] = {
 	// Target	|Target		|Status,|Blockier-	|Flash,	|Flash	|Flash	|Speed	|Speed	|Speed	|Speed
 	// Speed R,	|Speed L,	|Dauer,	|strom-		| On 	| Off	|Count	|IntVal |IntVal |Step   |Step
 	// (0.255),	|(0.255),	|[ms] ,	|stärke,	| [ms],	| [ms],	|	    | Re    | Li    | Re    | Li
-	{ 	0,		0,	 		0,		0,			1000,	1000,	0,		0,		0,		0,		0,			},		// #0 == INITIALIZED, 		
-	{ 	200,	200, 		0,		290,		200,	800,	0,		100,	100,	10,		10,			},		// #1 == PHASE1_OPENING,		
-	{ 	0,		0,	 		0,		290,		500,	500,	0,		0,		0,		0,		0,			},		// #2 == PHASE1_TESTING,		
-	{ 	0,		0,	 		0,		0,			1000,	1000,	0,		0,		0,		0,		0,			},		// #3 == PHASE1_DONE,		
-	{ 	255,	0,	 		0,		290,		200,	800,	0,		2000,	0,		10,		0,			},		// #4 == PHASE2_TESTING,		
-	{ 	0,		0,	 		0,		0,			1000,	1000,	0,		0,		0,		0,		0,			},		// #5 == PHASE2_DONE,		
-	{ 	0,		0,	 		0,		290,		200,	800,	0,		100,	100,	10,		10,			},		// #6 == PHASE3_TESTING,		
-	{ 	0,		0,	 		0,		0,			1000,	1000,	0,		0,		0,		0,		0,			},		// #7 == PHASE3_DONE			
-	{ 	150,	0,	 		0,		290,		200,	800,	0,		100,	0,		10,		0,			},		// #8 == PHASE4_CLOSING,			
-	{ 	0,		0,	 		0,		0, 			200,	400,	0,		0,		0,		0,		0,			},		// #9 == PHASE4_TESTING,			
-	{ 	0,		0,	 		0,		0,			1000,	1000,	0,		0,		0,		0,		0,			},		// #10 == PHASE4_DONE,			
-	{ 	190,	190, 		0,		290,		400,	800,	0,		100,	100,	10,		10,			},		// #11 == PHASE5_CLOSING,			
-	{ 	0,		0,	 		0,		0,			1000,	1000,	0,		0,		0,		0,		0,			},		// #12 == PHASE5_DONE,			
-	{ 	0,		0,	 		0,		0,			300,	300,	0,		0,		0,		0,		0,			},		// #13 == STOPPED			
+	{ 	0,		0,	 		0,		0,			1000,	1000,	0,		0,		0,		0,		0			},		// #0 == INITIALIZED, 		
+	{ 	200,	200, 		0,		290,		200,	800,	0,		100,	100,	10,		10			},		// #1 == PHASE1_OPENING,		
+	{ 	0,		0,	 		0,		290,		500,	500,	0,		0,		0,		0,		0			},		// #2 == PHASE1_TESTING,		
+	{ 	0,		0,	 		0,		0,			1000,	1000,	0,		0,		0,		0,		0			},		// #3 == PHASE1_DONE,		
+	{ 	255,	0,	 		0,		290,		200,	800,	0,		2000,	0,		10,		0			},		// #4 == PHASE2_TESTING,		
+	{ 	0,		0,	 		0,		0,			1000,	1000,	0,		0,		0,		0,		0			},		// #5 == PHASE2_DONE,		
+	{ 	0,		0,	 		0,		290,		200,	800,	0,		100,	100,	10,		10			},		// #6 == PHASE3_TESTING,		
+	{ 	0,		0,	 		0,		0,			1000,	1000,	0,		0,		0,		0,		0			},		// #7 == PHASE3_DONE			
+	{ 	150,	0,	 		0,		290,		200,	800,	0,		100,	0,		10,		0			},		// #8 == PHASE4_CLOSING,			
+	{ 	0,		0,	 		0,		0, 			200,	400,	0,		0,		0,		0,		0			},		// #9 == PHASE4_TESTING,			
+	{ 	0,		0,	 		0,		0,			1000,	1000,	0,		0,		0,		0,		0			},		// #10 == PHASE4_DONE,			
+	{ 	190,	190, 		0,		290,		400,	800,	0,		100,	100,	10,		10			},		// #11 == PHASE5_CLOSING,			
+	{ 	0,		0,	 		0,		0,			1000,	1000,	0,		0,		0,		0,		0			},		// #12 == PHASE5_DONE,			
+	{ 	255,	255, 		0,		290,		400,	800,	0,		100,	100,	10,		10			},		// #13 == OPENING,			
+	{ 	255,	255, 		0,		290,		400,	800,	0,		100,	100,	10,		10			},		// #14 == CLOSING,			
+	{ 	0,		0,	 		0,		0,			300,	300,	0,		0,		0,		0,		0			}		// #15 == STOPPED			
 };                                                                                                                               
 
 

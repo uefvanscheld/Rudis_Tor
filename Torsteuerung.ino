@@ -1,6 +1,16 @@
 /*
  ************************************************
  *
+ *	Version 0.98
+ *			- NEU: Unterscheidung von Betriebsmodi : Normal und Testbetrieb
+ *			- NEU: Status OPENING und CLOSING hinzugefügt
+ *			- NEU: Auswahl eines gewünschten Testprogramms
+ *			- NEU: Einführung von Sub-Status
+ *			- NEU: die Tore werden beim Öffnen und Schließen jetzt nacheinander mit Verzögerung gestartet
+ *			- 
+ *			
+ *			
+ *			
  *	Version 0.97 (speziell angepasst für die geplanten Testfahrten)
  *				s.a. Task auf dem Glo-Board: https://app.gitkraken.com/glo/board/W-6H0tbmZwAaeaqf/card/XIq2RPkhKgAP0kDB
  *	- Ergänzung um eine Ablaufsteuerung, die die verschiedenen Testphasen steuert
@@ -46,7 +56,7 @@
 #include <Arduino.h>
 #include "Torsteuerung.h"
 
-//#define DEBUG DEBUG
+
 
 void setup() {
 	Serial.begin(115200);
@@ -58,15 +68,19 @@ void setup() {
 	test_phase = 0;						// Variable für Phasen initialisieren
 	nextTimer_Motor_L_Event = millis();	// Timer des linken Motors für des zeitversetzte Schließen vorbereiten
 	IsDoorOpening			= true;		// beide Tore werden zuerst geöffnet
-<<<<<<< Updated upstream
+/* 
 	state = INITIALIZED;				// alle Werte initialisiert
 	execEnterStateINITIALIZED();
-=======
+*/
 	operationMode = TESTING;			// for now set operation mode to testing 
 	state = IDLE;						// alle Werte wurden initialisiert
 	execEnterStateIDLE();
 	
->>>>>>> Stashed changes
+	// if in testing mode ask user for debug messages
+	if (operationMode == TESTING) {
+		debugLevel = getDebugLevel();
+	}
+	
 }
 
 void loop() {
@@ -105,47 +119,9 @@ void loop() {
 		execEnterStateBLOCKED();
 	}
 */
-	// prüfen, ob der Arbeitsmodus bzw. der Zustand der Signallampe akualisiert werden muss
-	if (IsFlashLightActive && (timestamp >= nextTimerFlashEvent)) {
-		toggleFlashLight(IsFlashLightOn);
-	}
-
-	// prüfen, ob für einen der Motoren der PMW-Wert aktualisiert werden mus (beschleunigen / bremsen)
-	if (IsMotor_R_Ramping && (timestamp >= nextTimer_Motor_R_Event)) {
-		Update_PMW_Motor_R();
-		if (state == PHASE2_TESTING) {			// in Test-Phase 2: 
-			PWM_min_moving = PWM_Motor_R;		// Variable für den minimalen PWM-Wert an den neuen Wert anpassen
-			Serial.print(F("Neuer PWM-Wert: "));	// und ausgeben
-			Serial.println(PWM_min_moving);
-		}
-	}
-<<<<<<< Updated upstream
-	if (IsMotor_L_Ramping && (timestamp >= nextTimer_Motor_L_Event)) {
-		Update_PMW_Motor_L();
-	}
-
-=======
-	
-/* 	Serial.print (F("Vor Motor_L update PWM-Wert: "));
-	Serial.print (PWM_Motor_L);
-	Serial.print (F(";\t timestamp: "));
-	Serial.print (timestamp);
-	Serial.print (F(";\t nextTimer_Motor_L_Event: "));
-	Serial.print (nextTimer_Motor_L_Event);
-	Serial.println (F(""));	
-	if (IsMotor_L_Ramping && (timestamp >= nextTimer_Motor_L_Event)) {
-		Update_PMW_Motor_L();
-	}
-	Serial.print (F("Nach Motor_L update PWM-Wert: "));
-	Serial.print (PWM_Motor_L);
-	Serial.print (F(";\t timestamp: "));
-	Serial.print (timestamp);
-	Serial.print (F(";\t nextTimer_Motor_L_Event: "));
-	Serial.print (nextTimer_Motor_L_Event);
-	Serial.println (F(""));	
- */
- 
->>>>>>> Stashed changes
+	// jetzt prüfen, ob irgendwelche Timer abgelaufen sind 
+	handleTimerEvents();
+	 
 	/*
 	*
 	*	nun die Ereignisse bzw. Zustände auswerten und entsprechende Statusübergänge auslösen
@@ -160,7 +136,7 @@ void loop() {
 		case IDLE:
 			if (operationMode == TESTING) {
 					activeTestProgramm = getTestSelection();	// select for next test program to execute
-					processTestSection(activeTestProgramm);		// ... and take related actions ...
+					processTestSelection(activeTestProgramm);		// ... and take related actions ...
 			}
 			else {
 				// do nothing in case of normal operation ???
@@ -174,7 +150,8 @@ void loop() {
 			}
  */			
 		break;
-		case PHASE1_OPENING:
+		
+/* 		case PHASE1_OPENING:
 			// beide Tore werden gerade geöffnet
 			if (!(IsDoor_R_AtEndStop && IsDoor_L_AtEndStop)) {	// solange noch nicht beide Motoren am Anschlag sind
 				if (IsDoor_R_Blocked) {							// falls der rechte Motor blockiert ist, stoppen
@@ -201,25 +178,40 @@ void loop() {
 				execEnterStatePHASE1_TESTING();
 			}
 		break;
+ */
 		case PHASE1_TESTING:													// die Tests erfolgen nur mit dem linken Tor
-			if (!IsDoor_L_Blocked) {											// solange die Stomstärke noch nicht den Wert für die Hinderniserkennung erreicht hat...
-				log_PWM_CURRENT();												// den aktuellen PWM-Wert und die gemessene Stromstärke (= Analogwert) ausgeben
-				if (testing_next_event <= timestamp) {							// wenn die Testzeit zu Ende ist ... 
-					PWM_Motor_L = PWM_Motor_L + PWM_min_blocking_inc; 			// PWM-Wert um den definierten Wert erhöhen ...	
-					analogWrite(H_Br_L_En, PWM_Motor_L);						// PWM-Signal für den Motor aktualisieren ...
-					testing_next_event = timestamp + PWM_min_blocking_duration; // ... und neuen Zeitpunkt für Beenden der nächsten Messung festlegen
-					Serial.print(F("Neuer PWM-Wert: "));
-					Serial.println(PWM_Motor_L);
-				}
+			if (subStateStack == 2 && isCalledBy == 0) {
+				isCalledBy = PHASE1_TESTING;									// Aufruf an OPENING
+				state = OPENING;
 			}
-			else {																// falls der Motor überlastet wurde ....
-				log_PWM_CURRENT();												// den letzten PWM-Wert und die gemessene Stromstärke (= Analogwert) ausgeben
-				PWM_min_blocking = PWM_Motor_L;									// den PWM-Wert sichern für Phase 2
-				fastStopMotor_L();												// Motor sofort ausschalten
-				Serial.print(F("Blockierstromstärke erkannt; der erforderliche PWM-Wert dafür beträgt: "));
-				Serial.println(PWM_min_blocking);
-				state = PHASE1_DONE;						// neuer Status: PHASE1_DONE
-				execEnterStatePHASE1_DONE();					
+			else if (subStateStack == 2 && isCalledBy == PHASE1_TESTING) {			
+				subStateStack--;												// Substatus nach Ausführung vom Stack löschen
+				isCalledBy = 0;
+			}
+			if (subStateStack == 1 && isCalledBy == 0) {						// nach dem Öffnen der Tore ....
+				execExecStatePHASE1();											// ... das eigentliche Testprogramm initiieren
+				subStateStack--;												// und vermerken, dass das erledigt ist
+			}
+			else {							// ab hier nun die eigentlich Ausführung von Testprogramm 1
+				if (!IsDoor_L_Blocked) {											// solange die Stomstärke noch nicht den Wert für die Hinderniserkennung erreicht hat...
+					log_PWM_CURRENT();												// den aktuellen PWM-Wert und die gemessene Stromstärke (= Analogwert) ausgeben
+					if (testing_next_event <= timestamp) {							// wenn die Testzeit zu Ende ist ... 
+						PWM_Motor_L = PWM_Motor_L + PWM_min_blocking_inc; 			// PWM-Wert um den definierten Wert erhöhen ...	
+						analogWrite(H_Br_L_En, PWM_Motor_L);						// PWM-Signal für den Motor aktualisieren ...
+						testing_next_event = timestamp + PWM_min_blocking_duration; // ... und neuen Zeitpunkt für Beenden der nächsten Messung festlegen
+						Serial.print(F("Neuer PWM-Wert: "));
+						Serial.println(PWM_Motor_L);
+					}
+				}
+				else {																// falls der Motor überlastet wurde ....
+					log_PWM_CURRENT();												// den letzten PWM-Wert und die gemessene Stromstärke (= Analogwert) ausgeben
+					PWM_min_blocking = PWM_Motor_L;									// den PWM-Wert sichern für Phase 2
+					fastStopMotor_L();												// Motor sofort ausschalten
+					Serial.print(F("Blockierstromstärke erkannt; der erforderliche PWM-Wert dafür beträgt: "));
+					Serial.println(PWM_min_blocking);
+					state = PHASE1_DONE;						// neuer Status: PHASE1_DONE
+					execEnterStatePHASE1_DONE();					
+				}
 			}
 		break;
 		case PHASE1_DONE:
@@ -384,6 +376,37 @@ void loop() {
 				execEnterStatePHASE5_DONE();
 			}
 		break;
+		case OPENING:
+			// beide Tore werden geöffnet
+			if (!(IsDoor_R_AtEndStop && IsDoor_L_AtEndStop)) {	// solange noch nicht beide Motoren am Anschlag sind
+				if (IsDoor_R_Blocked) {							// falls der rechte Motor blockiert ist, stoppen
+					fastStopMotor_R();
+					if (!IsDoor_R_AtEndStop) Serial.println (F("Start Phase 1: Das rechte Tor hat jetzt den Anschlag erreicht (PHASE1_OPENING)...."));
+					IsDoor_R_AtEndStop = true;
+				}
+				if (IsDoor_L_Blocked) {							// falls der linke Motor blockiert ist, stoppen
+					fastStopMotor_L();
+					if (!IsDoor_L_AtEndStop) Serial.println (F("Start Phase 1: Das linke Tor hat jetzt den Anschlag erreicht (PHASE1_OPENING)...."));
+					IsDoor_L_AtEndStop = true;
+				}
+			}
+			else if(IsButtonNeedsProcessing) {					// ... oder	falls die Taste gedrückt wurde, beide Motoren stoppen
+				state = STOPPED;								// neuer Status: STOPPED
+				execEnterStateSTOPPED();			
+				IsButtonNeedsProcessing = false;				// Tastendruck wurde bearbeitet
+			}
+			else if(IsDoor_R_AtEndStop && IsDoor_L_AtEndStop){	// wenn beide Tore geöffnet sind, den Status verlassen (je nach Bedingung)
+				execExitStateOPENING();							// ... den Status verlassen
+/* 
+				Serial.println (F("Phase 1: Beide Tore sind nun bis zum Anschlag geöffnet und gestoppt"));
+				Serial.println (F("Phase 1: ...  3 Sekunden Pause zur Beruhigung der Tore ....."));
+				state = PHASE1_TESTING;							// neuer Status: PHASE1_TESTING
+				delay(3000);	// nur für Test am Breadboard: warten, bis die Stromtasten wieder losgelassen wurden
+				execEnterStatePHASE1_TESTING();
+ */
+			}
+		break;
+
 		
 		default:	
 

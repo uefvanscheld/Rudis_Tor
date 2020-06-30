@@ -15,12 +15,12 @@
 // #include "Torsteuerung.h"
 
 void initialize_FSM() {
-  IsDoorOpening     = true;   // Tor wird geöffnet; false --> schließen
-  IsCurrentOverloaded   = false;  // Hardware-Strombegrenzung hat nicht angesprochen
-  IsDoorBlocked     = false;  // Tür ist nicht blockiert
-  IsButtonNeedsProcessing = false;  // keine Taste wurde betätigt, daher keine Aktion notwendig
-  IsButtonReleased    = true;   // es ist gerade keine Taste gedrückt
-  IsMotorSpeedUpdated   = false;  // keine neue Motorgeschwindigkeit eingestellt
+  IsDoorOpening     = true;   		// Tor wird geöffnet; false --> schließen
+  IsCurrentOverloaded   = false;  	// Hardware-Strombegrenzung hat nicht angesprochen
+  IsDoorBlocked     = false;  		// Tür ist nicht blockiert
+  IsButtonNeedsProcessing = false; 	// keine Taste wurde betätigt, daher keine Aktion notwendig
+  IsButtonReleased    = true;   	// es ist gerade keine Taste gedrückt
+  IsMotorSpeedUpdated   = false;	// keine neue Motorgeschwindigkeit eingestellt
   
   IsDoor_R_AtEndStop = false;
   IsDoor_L_AtEndStop = false;
@@ -28,7 +28,9 @@ void initialize_FSM() {
   IsDoor_R_Blocked = false;
   IsDoor_L_Blocked = false;
 
-  state = IDLE;          // Annahme: Tor ist zu Beginn geschlossen
+  state = IDLE;						// Warten auf Eingabe: Tastendruck im Normalbetrieb, Testauswahl im Testbetrieb
+  isCalledBy = 0;					// erstmal kein sub-state
+  nextTimer_GatesDelay_Event = 0;	// kein Delay Event aktiv	
 }
 
 
@@ -132,7 +134,7 @@ byte get_jumper_status() {
 		IsJumper2Active = true;				// wenn ja, das entsprechende Flag setzen
 	}
 	else IsJumper2Active = false;			// ... ansonsten löschen
-
+	return(0);
 }
 
 // kontrolliere die Überstromschaltung
@@ -282,30 +284,26 @@ void initializeFlashLightNewState(char new_state) {
 	}
 }
 
-void debugFlags() {
-	unsigned int flagmap = 0;
-	flagmap = ((IsDoorOpening) | (IsCurrentOverloaded << 1) | (IsDoorBlocked << 2) | (IsDoorAtEndStop << 3) | (IsButtonNeedsProcessing << 4) | (IsButtonReleased << 5) | (IsMotorSpeedUpdated << 6) | (IsJumper1Active << 7) | (IsJumper2Active << 8)  );
-	flagmap = flagmap + (1 << 9);	// eine führende '1' ergänzen, damit die binäre Ausgabe immer die gleiche Länge hat
-	Serial.print (F(";\t flags:"));
-	Serial.print (flagmap, BIN);
-	Serial.print (F(" (Jum2-Jum1-SpdUpd-ButtRel-ButtPro-EndStp-Blk-Ovl-Opng);"));
-}
 
-
-// read serial port and wait for user to enter a single digit
-byte getSerialDigit() {
-	char recChar = 0;
+/*
+ * read serial port and wait for user to enter a single digit
+ * only the first character is used, additional bytes are dropped
+ * loop until user enters digits valid for calling routine
+  */
+byte getSerialDigit(byte min, byte max) {
+	char recChar = 0;		
+	char trash = 0;
 	byte recDigit = 0;
-	// wait for something in receive buffer
-	while (Serial.available() == 0) {
-	}
-	// read character entered first
-	recChar = Serial.read();
-	recDigit = recChar - 48;		// convert single byte ASCII to unsigned byte
-	if ((recDigit > 0) && (recDigit <= 9)) {
-		return (recDigit);
-	}
-	else return (0);
+	do {
+		while (Serial.available() == 0) {				// wait for something to receive
+		}
+		recChar = Serial.read();						// read character entered first
+		while (Serial.available()) {					// drop remaining buffer
+			trash = Serial.read();
+		}
+		recDigit = recChar - 48;						// convert single byte ASCII to unsigned byte
+	} while ((recDigit < min) || (recDigit > max));		// loop until user entered one of the allowed digits
+	return (recDigit);
 	// add here some code for error handling like "wait until a valid digit was entered or 0 to abort"
 }
 
@@ -325,14 +323,35 @@ byte getTestSelection() {
 	Serial.println();
 	Serial.print(F("Nummer des Programms eingeben [1.."));
 	Serial.print(numTestProgramms);
-	Serial.print(F("]:"));
+	Serial.print(F("]: "));
 	do {
-		sel = getSerialDigit();
+		sel = getSerialDigit(1,6);
 	} while ((sel == 0) || (sel > numTestProgramms));
 	Serial.println();
 	Serial.print(F("Testprogram <"));
 	Serial.print(sel);
 	Serial.println(F("> wird gestartet ..."));
+	Serial.println(F("****************************************************************************************"));
+	return (sel);
+} 
+
+
+// Auswahl, ob Debugmeldungen angezeigt werden sollen oder nicht
+byte getDebugLevel() {
+	byte sel;
+	
+	Serial.println(F("****************************************************************************************"));
+	Serial.println(F("Debug-Level festlegen:"));
+	Serial.println();
+	Serial.println(F("0 - Debug-Mitteilungen ausschalten"));
+	Serial.println(F("1 - Debug-Mitteilungen einschalten"));
+	Serial.println();
+	Serial.print(F("Debug-Level auswählen [0/1]: "));
+	sel = getSerialDigit(0,1);
+	Serial.println();
+	Serial.print(F("Debug-Level <"));
+	Serial.print(sel);
+	Serial.println(F("> ausgewählt ..."));
 	Serial.println(F("****************************************************************************************"));
 	return (sel);
 } 

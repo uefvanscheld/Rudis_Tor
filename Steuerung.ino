@@ -2,6 +2,14 @@
  * This file contains all subroutines related to FSM states and 
  controlling them
  *
+ *	Version 0.98
+ *	- NEU: Behandlung von Substatus
+ *	- NEU: 
+ *	- NEU: 
+ *	- Logging-Funktionen in separate Datei ausgelagert
+ *	-  
+ *	-  
+ *
  *	Version 0.97 (speziell angepasst für die geplanten Testfahrten)
  *
  *	Version 0.96
@@ -18,19 +26,25 @@
 //
 // next lines are related to state OPENING
 //
+/* 
 void execEnterStateOPENING()  {
 	startMotor_R(V_Motoren, IsDoorOpening);		// start MOTOR R
 	startMotor_L(V_Motoren, IsDoorOpening);		// start MOTOR L
 	initializeFlashLightNewState(state);		// Warnlampe auf den neuen Status einstellen
 
 }
-
+ */
 //
 // next lines are related to state INITIALIZED
 //
 void execEnterStateINITIALIZED()  {
+
 	initializeFlashLightNewState(state);		// Warnlampe auf den neuen Status einstellen
-	Serial.println(F("Initalisierung abgeschlossen !"));
+	Serial.println(F("****************************************************************************************"));
+	Serial.println(F("Torsteuerung - Version 0.98"));
+	Serial.println();
+	Serial.println(F("Initalisierung abgeschlossen"));
+	Serial.println(F("****************************************************************************************"));
 	
 }
 
@@ -38,8 +52,9 @@ void execEnterStateINITIALIZED()  {
 // next lines are related to state IDLE
 //
 void execEnterStateIDLE()  {
+	state = IDLE;
 	initializeFlashLightNewState(state);		// Warnlampe auf den neuen Status einstellen
-	Serial.println(F("System ab jetzt im Wartezustand ..."));
+	Serial.println(F("System im Wartezustand ..."));
 	
 }
 
@@ -98,7 +113,16 @@ void execEnterStatePHASE1_OPENING()  {
 //
 // next lines are related to state PHASE1_TESTING
 //
-void execEnterStatePHASE1_TESTING()  {
+void execEnterStatePHASE1()  {
+	state = PHASE1_TESTING;
+	subStateStack = 2;							// es muss ein Substatus ausgeführt werden (hier: OPENING)
+}
+
+//
+// next lines are related to state PHASE1_TESTING
+//
+void execExecStatePHASE1()  {
+	state = PHASE1_TESTING;
 	testing_next_event = 0;						// zunächst gibt es keinen nächsten Timerevent
 	PWM_Motor_R = 0;							// beide Motoren ausschalten
 	PWM_Motor_L = 0;
@@ -143,10 +167,24 @@ void execEnterStatePHASE1_TESTING()  {
 	Serial.println (F(""));
 
 }
+
+//
+// next lines are related to EXIT state PHASE1
+//
+void execExitStatePHASE1()  {
+	state = IDLE;
+	initializeFlashLightNewState(state);		// Warnlampe auf den neuen Status einstellen
+	Serial.println(F("Testprogramm 1 abgeschlossen !"));
+	Serial.println(F("****************************************************************************************"));
+	Serial.println();
+}
+
+
 //
 // next lines are related to state PHASE1_DONE
 //
 void execEnterStatePHASE1_DONE()  {
+	state = PHASE1_DONE;
 	initializeFlashLightNewState(state);		// Warnlampe auf den neuen Status einstellen
 	Serial.println(F("Testprogramm 1 abgeschlossen !"));
 	Serial.println(F("****************************************************************************************"));
@@ -157,6 +195,7 @@ void execEnterStatePHASE1_DONE()  {
 // next lines are related to state PHASE2_TESTING
 //
 void execEnterStatePHASE2_TESTING()  {
+	state = PHASE2_TESTING;
 	Serial.println (F("Start Phase 2: Ermittlung des minimalen PWM-Werts für eine Torbewegung des RECHTEN Tores beginnt (PHASE2_TESTING)...."));
 	initializeFlashLightNewState(state);		// Warnlampe auf den neuen Status einstellen
 	IsDoor_R_Blocked = false;
@@ -176,6 +215,7 @@ void execEnterStatePHASE2_TESTING()  {
 // next lines are related to state PHASE2_DONE
 //
 void execEnterStatePHASE2_DONE()  {
+	state = PHASE2_DONE;
 	initializeFlashLightNewState(state);		// Warnlampe auf den neuen Status einstellen
 	Serial.println(F("Phase 2 abgeschlossen !"));
 	Serial.println(F("****************************************************************************************"));
@@ -187,6 +227,7 @@ void execEnterStatePHASE2_DONE()  {
 // next lines are related to state PHASE3_TESTING
 //
 void execEnterStatePHASE3_TESTING()  {
+	state = PHASE3_TESTING;
 	Serial.println (F("Start Phase 3: Messung der Torlaufzeiten des LINKEN Tores bei verschiedenen Geschwindigkeiten (PHASE3_TESTING)...."));
 	initializeFlashLightNewState(state);		// Warnlampe auf den neuen Status einstellen
 	IsDoor_R_Blocked = false;
@@ -209,6 +250,7 @@ void execEnterStatePHASE3_TESTING()  {
 // next lines are related to state PHASE3_DONE
 //
 void execEnterStatePHASE3_DONE()  {
+	state = PHASE3_DONE;
 	initializeFlashLightNewState(state);		// Warnlampe auf den neuen Status einstellen
 	Serial.println(F("Phase 3 abgeschlossen !"));
 	Serial.println(F("****************************************************************************************"));
@@ -220,6 +262,7 @@ void execEnterStatePHASE3_DONE()  {
 // next lines are related to state PHASE4_CLOSING
 //
 void execEnterStatePHASE4_CLOSING()  {
+	state = PHASE4_CLOSING;
 	// jetzt erstmal auf den Tastdruck warten, damit die Phase und das Tor gestartet werden
 	IsButtonNeedsProcessing = false;
 	do
@@ -248,6 +291,7 @@ void execEnterStatePHASE4_CLOSING()  {
 // next lines are related to state PHASE4_TESTING
 //
 void execEnterStatePHASE4_TESTING()  {
+	state = PHASE4_TESTING;
 	IsDoorOpening = CloseDoor;
 	// Taste wurde gedrückt; nun das rechte Tor schließen, solange die Taste gedrückt bleibt
 	// Serial.println (F("Start Phase 4: Ermittlung des maximalen PWM-Werts, mit dem ein Motor aus dem Stand ohne Überlastung gestartet werden kann, beginnt (PHASE4_TESTING)...."));
@@ -272,6 +316,7 @@ void execEnterStatePHASE4_TESTING()  {
 // next lines are related to state PHASE4_DONE
 //
 void execEnterStatePHASE4_DONE()  {
+	state = PHASE4_DONE;
 	initializeFlashLightNewState(state);		// Warnlampe auf den neuen Status einstellen
 	Serial.println(F("Phase 4 abgeschlossen !"));
 	Serial.println(F("****************************************************************************************"));
@@ -281,6 +326,7 @@ void execEnterStatePHASE4_DONE()  {
 
 
 void execEnterStatePHASE5_CLOSING()  {
+	state = PHASE5_CLOSING;
 	Serial.println (F("Zum Abschluss werden jetzt beide Tore geschlossen..."));
 	initializeFlashLightNewState(state);		// Warnlampe auf den neuen Status einstellen
 	IsDoor_R_Blocked = false;
@@ -306,6 +352,7 @@ void execEnterStatePHASE5_CLOSING()  {
 // next lines are related to state PHASE5_DONE
 //
 void execEnterStatePHASE5_DONE()  {
+	state = PHASE5_DONE;
 	initializeFlashLightNewState(state);		// Warnlampe auf den neuen Status einstellen
 	Serial.println(F("Testprogramm komplett abgeschlossen !"));
 	Serial.println(F("****************************************************************************************"));
@@ -315,6 +362,7 @@ void execEnterStatePHASE5_DONE()  {
 // next lines are related to state BLOCKED
 //
 void execEnterStateBLOCKED() {
+	state = BLOCKED;
 	fastStopMotor_R();	// stop MOTOR R
 	fastStopMotor_L();	// stop MOTOR L
 	initializeFlashLightNewState(state);	// Warnlampe auf den neuen Status einstellen
@@ -326,6 +374,7 @@ void execEnterStateBLOCKED() {
 // next lines are related to state OVERLOAD
 //
 void execEnterStateOVERLOAD()  {
+	state = OVERLOAD;
 	fastStopMotor_R();			// stop MOTOR R
 	fastStopMotor_L();			// stop MOTOR L
 	initializeFlashLightNewState(state);	// Warnlampe auf den neuen Status einstellen
@@ -334,9 +383,47 @@ void execEnterStateOVERLOAD()  {
 }
 
 //
+// next lines are related to state OPENING
+//
+void execEnterStateOPENING()  {
+	state = OPENING;
+	Serial.println(F("****************************************************************************************"));
+	Serial.println(F("Status: OPENING  -  Beide Tore werden jetzt geöffnet"));
+
+	IsDoor_R_Blocked = false;
+	IsDoor_L_Blocked = false;
+
+	PWM_Motor_R_Target = parameter[state].Motor_R_Speed_Target;	// Zielgeschwindigkeit ermitteln
+	PWM_Motor_L_Target = parameter[state].Motor_L_Speed_Target;	// Zielgeschwindigkeit ermitteln
+	
+	nextTimer_GatesDelay_Event = timestamp;		// timer für den verzögerten Start des linken Tores setzen
+	
+	startMotor_R(PWM_Motor_R, OpenDoor);		// rechten MOTOR starten
+	initializeFlashLightNewState(state);		// Warnlampe auf den neuen Status einstellen
+
+}
+
+void execExitStateOPENING()  {
+	Serial.println(F("****************************************************************************************"));
+	Serial.println(F("Status: OPENING  -  Beide Tore sind jetzt bis zum Anschlag geöffnet"));
+
+	// wenn das Öffnen von einem anderen Status aufgerufen wurde ....
+	if (isCalledBy) {
+		returnToParentStatus();			// ... in den aufrufenden Status zurückwechseln	
+	}
+	else {
+		state = IDLE;					// wieder in den Status IDLE zurückkehren
+		execEnterStateIDLE();				
+	}
+
+}
+
+
+//
 // next lines are related to state CLOSING
 //
 void execEnterStateCLOSING()  {
+	state = CLOSING;
 	startMotor_R(V_Motoren, IsDoorOpening);		// start MOTOR R
 	startMotor_L(V_Motoren, IsDoorOpening);		// start MOTOR L
 	initializeFlashLightNewState(state);		// Warnlampe auf den neuen Status einstellen
@@ -346,6 +433,7 @@ void execEnterStateCLOSING()  {
 // next lines are related to state STOPPED
 //
 void execEnterStateSTOPPED()  {
+	state = STOPPED;
 	fastStopMotor_R();			// stop MOTOR R
 	fastStopMotor_L();			// stop MOTOR L
 	initializeFlashLightNewState(state);	// Warnlampe auf den neuen Status einstellen
@@ -357,6 +445,7 @@ void execEnterStateSTOPPED()  {
 // next lines are related to state OPENED
 //
 void execEnterStateOPENED() {
+	state = OPENED;
 	fastStopMotor_R();	// stop MOTOR R
 	fastStopMotor_L();	// stop MOTOR L
 	initializeFlashLightNewState(state);	// Warnlampe auf den neuen Status einstellen
@@ -367,133 +456,108 @@ void execEnterStateOPENED() {
 /* 
 take selected test programm and move FSM into related state
  */
- void processTestSection(byte testToLaunch) {
+ void processTestSelection(byte testToLaunch) {
 	 
 	 switch (testToLaunch) {
 		 case BLOCKCURRENT:
-			state = PHASE1_OPENING;				// neuer Status: PHASE1_OPENING
-			execEnterStatePHASE1_OPENING();
+			state = PHASE1_TESTING;				// neuer Status: PHASE1_OPENING
+			execEnterStatePHASE1();
 		 break;
 		 case MINMOVEPWM:
-		 
+			state = PHASE2_TESTING;
+			execEnterStatePHASE2_TESTING();
 		 break;
 		 case MOVETIME:
-		 
+			state = PHASE3_TESTING;
+			execEnterStatePHASE3_TESTING();
 		 break;
 		 case STARTNOTBLOCKING:
-		 
+			state = PHASE4_CLOSING;
+			execEnterStatePHASE4_CLOSING();
 		 break;
 		 case OPENGATES:
-		 
+			execEnterStateOPENING();
 		 break;
 		 case CLOSEGATES:
-		 
+			execEnterStateCLOSING();
 		 break;
-		 
-		 
-		 
 	 }
-	 
-	 
  }
 
 
-
-//
-// next lines are related to logging PWM, current (analog input) during phase 1 testing
-//
-void log_PWM_CURRENT() {
-	Serial.print (timestamp);
-	Serial.print (F(":\t PWM(L): "));
-	Serial.print (PWM_Motor_L);
-	Serial.print (F(";\t aktuelle Stromstärke: "));
-	Serial.print (analogRead(Strom_L));
-	Serial.print (F(";\t Stromstärke (vorheriger Wert): "));
-	Serial.print (Mot_L_Current);
-    Serial.println (F(""));
+void returnToParentStatus() {			// vom Sub-Status in den Parent-Status zurück wechseln	
+	state = isCalledBy;					// ab jetzt wieder den Parent-Status ausführen lassen 
+	isCalledBy = 0;
+/*
+	switch (state) {					// jetzt zum Parent status zurückspringen
+		 case PHASE1_TESTING:
+			execExecStatePHASE1();
+		 break;
+		 case PHASE2_TESTING:
+			state = PHASE2_TESTING;
+		 break;
+		 case PHASE3_TESTING:
+			state = PHASE3_TESTING;
+			execEnterStatePHASE3_TESTING();
+		 break;
+		 case STARTNOTBLOCKING:
+			execEnterStatePHASE4_CLOSING();
+		 break;
+		 case OPENGATES:
+			state = OPENING;
+			execEnterState_OPENING();
+		 break;
+		 case CLOSEGATES:
+			state = CLOSING; 
+			execEnterState_CLOSING();
+		 break;
+		
+	}
+*/
 }
-
-void log_PWM_CURRENT_R() {
-	Serial.print (timestamp);
-	Serial.print (F(":\t PWM(R): "));
-	Serial.print (PWM_Motor_R);
-	Serial.print (F(";\t aktuelle Stromstärke: "));
-	Serial.print (analogRead(Strom_R));
-	Serial.print (F(";\t Stromstärke (vorheriger Wert): "));
-	Serial.print (Mot_R_Current);
-    Serial.println (F(""));
-}
-
-void log_PWM_RUNTIME() {
-	Serial.print (timestamp - Startzeit_Tor);
-	Serial.print (F(" [ms]:\t PWM(L): "));
-	Serial.print (PWM_Motor_L);
-	Serial.print (F(";\t aktuelle Stromstärke: "));
-	Serial.print (analogRead(Strom_L));
-	Serial.print (F(";\t IsDoor_L_Blocked: "));
-	Serial.print (IsDoor_L_Blocked);
-	Serial.print (F(";\t Runtime_Direction_Opening: "));
-	Serial.print (Runtime_Direction_Opening);
-    Serial.println (F(""));
-}
-void log_Phase3_Anschlag() {
-	Serial.print (F("Phase 3: Tor am Anschlag angekommen !!"));
-	Serial.print (F("Phase 3: Bei einem PWM-Wert von "));
-	Serial.print (PWM_Motor_L);
-	Serial.print (F(" beträgt die Laufzeit: "));
-	Serial.print (Zielzeit_Tor - Startzeit_Tor);
-	Serial.print (F(" [ms]"));
-    Serial.println (F(""));
-	Serial.println(F("****************************************************************************************"));
-}
-
-
-void log_Debugging() {
-
-	Serial.print (millis());
-    Serial.print (F(";\t st:"));
-	Serial.print (state);
-
-    Serial.print (F(";\t PWM-R:"));
-	Serial.print (PWM_Motor_R);
-    Serial.print (F(";\t PWM-L:"));
-	Serial.print (PWM_Motor_L);
-
-    Serial.print (F(";\t I-R:"));
-	Serial.print (Mot_R_Current);
-    Serial.print (F(";\t I-L:"));
-	Serial.print (Mot_L_Current);
-
-    Serial.print (F(";\t I-R-Lim:"));
-	Serial.print (Mot_R_Current_Limit);
-    Serial.print (F(";\t I-L-Lim:"));
-	Serial.print (Mot_L_Current_Limit);
-
-    Serial.print (F(";\t PWM-R-Ziel:"));
-	Serial.print (PWM_Motor_R_Target);
-    Serial.print (F(";\t PWM-L-Ziel:"));
-	Serial.print (PWM_Motor_L_Target);
-	
-    Serial.print (F(";\t R-Blk:"));
-	Serial.print (IsDoor_R_Blocked);
-    Serial.print (F(";\t L-Blk:"));
-	Serial.print (IsDoor_L_Blocked);
 
 /*
-    Serial.print (F(";\t F-on:"));
-	Serial.print (flash_on_duration);
-    Serial.print (F(";\t F-off:"));
-	Serial.print (flash_off_duration);
-    Serial.print (F(";\t t_next:"));
-	Serial.print (nextTimerFlashEvent);
+	check if any timer expired and take proper actions
+*/
+void handleTimerEvents() {
+	// prüfen, ob der Arbeitsmodus bzw. der Zustand der Signallampe akualisiert werden muss
+	if (IsFlashLightActive && (timestamp >= nextTimerFlashEvent)) {
+		toggleFlashLight(IsFlashLightOn);
+	}
 
-    Serial.print (F(";\t IsFlashLightActive:"));
-	Serial.print (IsFlashLightActive);
-    Serial.print (F(";\t IsFlashLightOn:"));
-	Serial.print (IsFlashLightOn);
+	// prüfen, ob für einen der Motoren der PMW-Wert aktualisiert werden mus (beschleunigen / bremsen)
+	if (IsMotor_R_Ramping && (timestamp >= nextTimer_Motor_R_Event)) {
+		Update_PMW_Motor_R();
+		if (state == PHASE2_TESTING) {			// in Test-Phase 2: 
+			PWM_min_moving = PWM_Motor_R;		// Variable für den minimalen PWM-Wert an den neuen Wert anpassen
+			Serial.print(F("Neuer PWM-Wert: "));	// und ausgeben
+			Serial.println(PWM_min_moving);
+		}
+	}
+	if (IsMotor_L_Ramping && (timestamp >= nextTimer_Motor_L_Event)) {
+		Update_PMW_Motor_L();
+	}
 
-	debugFlags();
-
- */
-    Serial.println (F(""));
+	// prüfen, ob beim Öffnen oder Schließen jetzt der zweite Motoren gestartet werden muss
+	if (nextTimer_GatesDelay_Event > 0 && timestamp >= nextTimer_GatesDelay_Event) {		// 
+		switch (state) {
+		OPENING:
+			startMotor_L(PWM_Motor_L, OpenDoor);		// beim Öffnen den linken Motor verzögert starten
+			if (debugLevel) {
+				strcpy(message, "debug: linker Motor verzögert gestartet");
+				logMessage();
+			}
+		break;
+		CLOSING;
+			startMotor_R(PWM_Motor_R, CloseDoor);		// beim Schließen den rechten Motor verzögert starten
+			if (debugLevel) {
+				strcpy(message, "debug: rechter Motor verzögert gestartet");
+				logMessage();
+			}
+		break;
+		default:
+		break;
+		}
+	}
 }
+
