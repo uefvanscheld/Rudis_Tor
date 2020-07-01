@@ -312,6 +312,7 @@ byte getTestSelection() {
 	byte sel;
 	
 	Serial.println(F("****************************************************************************************"));
+	//logDebug(Bin jetzt im Menu);
 	Serial.println(F("Testprogramm wählen:"));
 	Serial.println();
 	Serial.println(F("1 - Ermittlung der Blockierströme für alle PWM-Wertes (am Anschlag)"));

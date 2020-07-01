@@ -47,6 +47,7 @@
 
 // #define DEBUG			// Flag für Logging zum Debuggen
 
+
 #define	ProgVersion		0.98	// Versionsnummer
 
 //Eingänge digital
@@ -73,6 +74,16 @@
 #define  H_Br_R_En      11 	//H-Brücke Motor Rechts Enable;	dieser Ausgang erzeugt das PWM-Signal für den rechten Motor
 #define  H_Br_L_En      9 	//H-Brücke Motor Links Enable;	dieser Ausgang erzeugt das PWM-Signal für den linken Motor
 #define  Warnleuchte    13 	//Warnleuchte an
+
+//#define SZ(s) (sizeof(#s))
+//#define __FILENAME__ (sizeof("Hallo"))
+//#define __FILENAME__ (__FILE__ + SOURCE_PATH_SIZE)
+
+//#define logDebug(d,m) ( d > 0 ? Serial.print(#m): Serial.print("Debug deaktiviert"))
+//#define logDebug(m) ( debugLevel > 0 ? Serial.println(__FILE__, __LINE__, #m): Serial.println("Debug deaktiviert"))
+//Works - #define logDebug(m) ( debugLevel > 0 ? Serial.println(__FILE__): Serial.println("Debug deaktiviert"))
+//#define logDebug(m) ( debugLevel > 0 ? 	Serial.print(__FILE__ #m): Serial.println("Debug deaktiviert"))
+//#define logDebug(m) ( debugLevel > 0 ? printf(message,__FILE__): Serial.println("Debug deaktiviert"))
 
 
 // Steuerungs-Flags

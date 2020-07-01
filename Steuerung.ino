@@ -54,7 +54,8 @@ void execEnterStateINITIALIZED()  {
 void execEnterStateIDLE()  {
 	state = IDLE;
 	initializeFlashLightNewState(state);		// Warnlampe auf den neuen Status einstellen
-	Serial.println(F("System im Wartezustand ..."));
+	Serial.println(F("****************************************************************************************"));
+	Serial.println(F("Status: IDLE  -  System im Wartezustand ..."));
 	
 }
 
@@ -115,6 +116,7 @@ void execEnterStatePHASE1_OPENING()  {
 //
 void execEnterStatePHASE1()  {
 	state = PHASE1_TESTING;
+	isCalledBy = 0;
 	subStateStack = 2;							// es muss ein Substatus ausgeführt werden (hier: OPENING)
 }
 
@@ -386,6 +388,11 @@ void execEnterStateOVERLOAD()  {
 // next lines are related to state OPENING
 //
 void execEnterStateOPENING()  {
+	if (debugLevel) {
+		strcpy(message, "Eintritt execEnterStateOPENING");
+		logFSM();
+	}
+
 	state = OPENING;
 	Serial.println(F("****************************************************************************************"));
 	Serial.println(F("Status: OPENING  -  Beide Tore werden jetzt geöffnet"));
@@ -396,14 +403,22 @@ void execEnterStateOPENING()  {
 	PWM_Motor_R_Target = parameter[state].Motor_R_Speed_Target;	// Zielgeschwindigkeit ermitteln
 	PWM_Motor_L_Target = parameter[state].Motor_L_Speed_Target;	// Zielgeschwindigkeit ermitteln
 	
-	nextTimer_GatesDelay_Event = timestamp;		// timer für den verzögerten Start des linken Tores setzen
+	nextTimer_GatesDelay_Event = timestamp + GatesDelay;		// Timer für den verzögerten Start des linken Tores setzen
 	
-	startMotor_R(PWM_Motor_R, OpenDoor);		// rechten MOTOR starten
-	initializeFlashLightNewState(state);		// Warnlampe auf den neuen Status einstellen
+	startMotor_R(PWM_Motor_R, OpenDoor);						// rechten MOTOR starten
+	initializeFlashLightNewState(state);						// Warnlampe auf den neuen Status einstellen
 
+	if (debugLevel) {
+		strcpy(message, "Ende execEnterStateOPENING");
+		logFSM();
+	}
 }
 
 void execExitStateOPENING()  {
+	if (debugLevel) {
+		strcpy(message, "Begin execExitStateOPENING");
+		logFSM();
+	}
 	Serial.println(F("****************************************************************************************"));
 	Serial.println(F("Status: OPENING  -  Beide Tore sind jetzt bis zum Anschlag geöffnet"));
 
@@ -412,10 +427,12 @@ void execExitStateOPENING()  {
 		returnToParentStatus();			// ... in den aufrufenden Status zurückwechseln	
 	}
 	else {
-		state = IDLE;					// wieder in den Status IDLE zurückkehren
-		execEnterStateIDLE();				
+		execEnterStateIDLE();			// wieder in den Status IDLE zurückkehren	
 	}
-
+	if (debugLevel) {
+		strcpy(message, "Ende execExitStateOPENING");
+		logFSM();
+	}
 }
 
 

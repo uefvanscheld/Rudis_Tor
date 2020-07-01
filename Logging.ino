@@ -124,3 +124,17 @@ void logMessage() {
 	Serial.println (message);
 }
 
+void logFSM() {
+	Serial.print (millis());	// add timestamp
+    Serial.print (F(":\tstate: "));
+	Serial.print (state);
+    Serial.print (F(";\t isCalledBy:"));
+	Serial.print (isCalledBy);
+    Serial.print (F(";\t subStateStack:"));
+	Serial.print (subStateStack);
+    Serial.print (F(";\tmsg:"));
+	Serial.print (message);
+	
+    Serial.println (F(""));
+}
+
