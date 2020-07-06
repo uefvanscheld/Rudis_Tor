@@ -125,16 +125,71 @@ void logMessage() {
 }
 
 void logFSM() {
-	Serial.print (millis());	// add timestamp
-    Serial.print (F(":\tstate: "));
+	//Serial.print (millis());	// add timestamp
+    Serial.print (F(", FSM: state:"));
 	Serial.print (state);
-    Serial.print (F(";\t isCalledBy:"));
+    Serial.print (F("; isCalledBy:"));
 	Serial.print (isCalledBy);
-    Serial.print (F(";\t subStateStack:"));
+    Serial.print (F("; subStateStack:"));
 	Serial.print (subStateStack);
-    Serial.print (F(";\tmsg:"));
-	Serial.print (message);
 	
-    Serial.println (F(""));
+    // newline will be appended by calling macro 
+}
+
+void logTIMER() {
+	//Serial.print (millis());	// add timestamp
+    Serial.print (F(", TIMER: timestamp:"));
+	Serial.print (timestamp);
+    Serial.print (F("; nextTimerFlashEvent:"));
+	Serial.print (nextTimerFlashEvent);
+    Serial.print (F("; nextTimer_Motor_R_Event:"));
+	Serial.print (nextTimer_Motor_R_Event);
+    Serial.print (F("; nextTimer_Motor_L_Event:"));
+	Serial.print (nextTimer_Motor_L_Event);
+    Serial.print (F("; nextTimer_GatesDelay_Event:"));
+	Serial.print (nextTimer_GatesDelay_Event);
+	
+    // newline will be appended by calling macro 
+}
+
+void logMOTOR() {
+	// Serial.print (millis());
+    Serial.print (F(", PWM-R:"));
+	Serial.print (PWM_Motor_R);
+    Serial.print (F("; PWM-L:"));
+	Serial.print (PWM_Motor_L);
+
+    Serial.print (F("; I-R:"));
+	Serial.print (Mot_R_Current);
+    Serial.print (F("; I-L:"));
+	Serial.print (Mot_L_Current);
+
+    Serial.print (F("; I-R-Lim:"));
+	Serial.print (Mot_R_Current_Limit);
+    Serial.print (F("; I-L-Lim:"));
+	Serial.print (Mot_L_Current_Limit);
+
+    Serial.print (F("; PWM-R-Ziel:"));
+	Serial.print (PWM_Motor_R_Target);
+    Serial.print (F("; PWM-L-Ziel:"));
+	Serial.print (PWM_Motor_L_Target);
+	
+    Serial.print (F("; R-Blk:"));
+	Serial.print (IsDoor_R_Blocked);
+    Serial.print (F("; L-Blk:"));
+	Serial.print (IsDoor_L_Blocked);
+
+    Serial.print (F("; R_Rmp:"));
+	Serial.print (IsMotor_R_Ramping);
+    Serial.print (F("; L_Rmp:"));
+	Serial.print (IsMotor_L_Ramping);
+
+    Serial.print (F("; R_SpdUp:"));
+	Serial.print (IsMotor_R_SpeedingUp);
+    Serial.print (F("; L_SpdUp:"));
+	Serial.print (IsMotor_L_SpeedingUp);
+
+	
+    // newline will be appended by calling macro 
 }
 

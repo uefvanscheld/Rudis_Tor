@@ -80,6 +80,7 @@ void setup() {
 	if (operationMode == TESTING) {
 		debugLevel = getDebugLevel();
 	}
+
 	
 }
 
@@ -119,7 +120,8 @@ void loop() {
 		execEnterStateBLOCKED();
 	}
 */
-	// jetzt prüfen, ob irgendwelche Timer abgelaufen sind 
+	// jetzt prüfen, ob irgendwelche Timer abgelaufen sind
+//	logDebug(TIMER,#);
 	handleTimerEvents();
 	 
 	/*
@@ -180,52 +182,31 @@ void loop() {
 		break;
  */
 		case PHASE1_TESTING:													// die Tests erfolgen nur mit dem linken Tor
-			if (debugLevel) {
-				strcpy(message, "Eintritt PHASE1_TESTING");
-				logFSM();
+			logDebug(FSM,#);
+			// zuerst(!!) prüfen, ob zuvor an einen Substatus übergeben wurde (isCalledBy ist gesetzt und identisch zum eigenen/aktuellen Status) 
+			if (isCalledBy == PHASE1_TESTING) {			
+				// jetzt die Verwaltung des status-internen Zustandes
+				if (subStateStack == 2) {			
+					subStateStack--;											// Substatus nach Ausführung vom Stack löschen
+					isCalledBy = 0;
+					logDebug(FSM,#);
+				}
+				logDebug(FSM,#);
 			}
-			if (subStateStack == 2 && isCalledBy == 0) {
+			// wenn die Tore noch nicht geöffnet wurden, an den Substatus übergeben
+			else if (subStateStack == 2 && isCalledBy == 0) {
 				isCalledBy = PHASE1_TESTING;									// Aufruf an OPENING
-				if (debugLevel) {
-					strcpy(message, "PHASE1_TESTING debug: Öffnen als Substatus wird jetzt gestartet");
-					logMessage();
-					strcpy(message, "PHASE1_TESTING debug: Öffnen als Substatus wird jetzt gestartet");
-					logFSM();
-				}
+				logDebug(FSM,#);
 				execEnterStateOPENING();
-				if (debugLevel) {
-					strcpy(message, "Ende: Aufruf Öffnen als Substatus von PHASE1_TESTING");
-					logFSM();
-				}
 				break;	// jetzt den Hauptstatus erstmal verlassen und den Substatus ausführen
 			}
-			else if (subStateStack == 2 && isCalledBy == PHASE1_TESTING) {			
-				if (debugLevel) {
-					strcpy(message, "PHASE1_TESTING debug: Öffnen als Substatus ist abgeschlossen");
-					logMessage();
-				}
-				subStateStack--;												// Substatus nach Ausführung vom Stack löschen
-				isCalledBy = 0;
-			}
 			if (subStateStack == 1 && isCalledBy == 0) {						// nach dem Öffnen der Tore ....
-				if (debugLevel) {
-					strcpy(message, "PHASE1_TESTING debug: eigentliche Testphase wird mit execExecStatePHASE1 initiiert");
-					logMessage();
-				}
 				execExecStatePHASE1();											// ... das eigentliche Testprogramm initiieren
 				subStateStack--;												// und vermerken, dass das erledigt ist
-				if (debugLevel) {
-					strcpy(message, "Ende: Initiierung der eigentlichen PHASE1_TESTING");
-					logFSM();
-				}
+				logDebug(FSM,#);
 			}
 			else {							// ab hier nun die eigentlich Ausführung von Testprogramm 1
-				if (debugLevel) {
-					strcpy(message, "PHASE1_TESTING debug: Ausführung der eigentlichen Testphase");
-					logMessage();
-					strcpy(message, "Ausführung des eigentlichen PHASE1_TESTING");
-					logFSM();
-				}
+				logDebug(FSM,#);
 				if (!IsDoor_L_Blocked) {											// solange die Stomstärke noch nicht den Wert für die Hinderniserkennung erreicht hat...
 					log_PWM_CURRENT();												// den aktuellen PWM-Wert und die gemessene Stromstärke (= Analogwert) ausgeben
 					if (testing_next_event <= timestamp) {							// wenn die Testzeit zu Ende ist ... 
@@ -245,10 +226,6 @@ void loop() {
 					state = PHASE1_DONE;						// neuer Status: PHASE1_DONE
 					execEnterStatePHASE1_DONE();					
 				}
-			}
-			if (debugLevel) {
-				strcpy(message, "Ende: case PHASE1_TESTING");
-				logFSM();
 			}
 		break;
 		case PHASE1_DONE:
@@ -414,11 +391,12 @@ void loop() {
 			}
 		break;
 		case OPENING:
-			if (debugLevel) {
+			logDebug(FSM,#);
+/* 			if (debugLevel) {
 				strcpy(message, "Start: case OPENING");
 				logFSM();
 			}
-			// beide Tore werden geöffnet
+ */			// beide Tore werden geöffnet
 			if (!(IsDoor_R_AtEndStop && IsDoor_L_AtEndStop)) {	// solange noch nicht beide Motoren am Anschlag sind
 				if (IsDoor_R_Blocked) {							// falls der rechte Motor blockiert ist, stoppen
 					fastStopMotor_R();
@@ -446,11 +424,11 @@ void loop() {
 				execEnterStatePHASE1_TESTING();
  */
 			}
-			if (debugLevel) {
+/* 			if (debugLevel) {
 				strcpy(message, "Ende: case OPENING");
 				logFSM();
 			}
-		break;
+ */		break;
 
 		
 		default:	

@@ -74,6 +74,7 @@ void sendSyncImpuls() {
 *	und im Fall einer Beschleunigung/Bremsung (ramping) wird der Zeitpunkt für den nächsten PWM-Update-Event gesetzt
 */
 void startMotor_R(int pmw_val, boolean opening) {
+	logDebug(FSM,#);
 	digitalWrite(H_Br_R_En, LOW);										// stop the PWM signal to prevent confusion
 	sendSyncImpuls();													// sende SYNC-Impuls
 	IsMotor_R_Ramping = false;
@@ -99,12 +100,14 @@ void startMotor_R(int pmw_val, boolean opening) {
 	}
 	// Motor jetzt mit der derzeit aktuellen Geschwindigkeit (PWM-Signal) starten
 	analogWrite(H_Br_R_En, (int)PWM_Motor_R);
+	logDebug(MOTOR,#);
 }
 
 
 
 
 void startMotor_L(int pmw_val, boolean opening) {
+	logDebug(FSM,#);
 	digitalWrite(H_Br_L_En, LOW);	// stop the PWM signal to prevent confusion
 	sendSyncImpuls();				// sende SYNC-Impuls
 	IsMotor_L_Ramping = false;
@@ -130,6 +133,7 @@ void startMotor_L(int pmw_val, boolean opening) {
 	}
 	// Motor jetzt mit der derzeit aktuellen Geschwindigkeit (PWM-Signal) starten
 	analogWrite(H_Br_L_En, (int)PWM_Motor_L);
+	logDebug(MOTOR,#);
 }
 
 /*
@@ -205,6 +209,9 @@ void updateMotorSpeed(byte pmw_val) {
 *	Diese Routine wird aufgerufen, wenn ein Zeitinterval für den Motor abgelaufen ist
 */
 void Update_PMW_Motor_R() {
+//	logDebug(FSM,#);
+//	logDebug(MOTOR,#);	
+
 	// ermitteln, ob die Geschwindigkeit erhöht oder reduziert werden muss
 	if (IsMotor_R_SpeedingUp) {
 		// PWM-Wert nur so stark erhöhen, dass der Zielwert nicht überschritten wird; besonders wichtig bei Zielwert = 255, um Überlauf zu vermeiden
@@ -223,10 +230,14 @@ void Update_PMW_Motor_R() {
 	else {											// falls nicht, dann den Zeitpunkt für die nächste Geschwindigkeitsanpassung ermitteln
 		nextTimer_Motor_R_Event = nextTimer_Motor_R_Event + parameter[state].Motor_R_Speed_Interval;
 	}
+//	logDebug(MOTOR,#);	
 }
 
 // Der PWM-Wert für den linken Motor muss angepasst werden
 void Update_PMW_Motor_L() {
+//	logDebug(FSM,#);
+//	logDebug(MOTOR,#);	
+
 	// ermitteln, ob die Geschwindigkeit erhöht oder reduziert werden muss
 	if (IsMotor_L_SpeedingUp) {
 		// PWM-Wert nur so stark erhöhen, dass der Zielwert nicht überschritten wird; besonders wichtig bei Zielwert = 255, um Überlauf zu vermeiden
@@ -245,4 +256,5 @@ void Update_PMW_Motor_L() {
 	else {											// falls nicht, dann den Zeitpunkt für die nächste Geschwindigkeitsanpassung ermitteln
 		nextTimer_Motor_L_Event = nextTimer_Motor_L_Event + parameter[state].Motor_L_Speed_Interval;
 	}
+//	logDebug(MOTOR,#);	
 }

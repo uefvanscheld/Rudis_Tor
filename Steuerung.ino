@@ -115,6 +115,7 @@ void execEnterStatePHASE1_OPENING()  {
 // next lines are related to state PHASE1_TESTING
 //
 void execEnterStatePHASE1()  {
+	logDebug(FSM,#);
 	state = PHASE1_TESTING;
 	isCalledBy = 0;
 	subStateStack = 2;							// es muss ein Substatus ausgeführt werden (hier: OPENING)
@@ -124,6 +125,7 @@ void execEnterStatePHASE1()  {
 // next lines are related to state PHASE1_TESTING
 //
 void execExecStatePHASE1()  {
+	logDebug(FSM,#);
 	state = PHASE1_TESTING;
 	testing_next_event = 0;						// zunächst gibt es keinen nächsten Timerevent
 	PWM_Motor_R = 0;							// beide Motoren ausschalten
@@ -174,6 +176,7 @@ void execExecStatePHASE1()  {
 // next lines are related to EXIT state PHASE1
 //
 void execExitStatePHASE1()  {
+	logDebug(FSM,#);
 	state = IDLE;
 	initializeFlashLightNewState(state);		// Warnlampe auf den neuen Status einstellen
 	Serial.println(F("Testprogramm 1 abgeschlossen !"));
@@ -388,11 +391,12 @@ void execEnterStateOVERLOAD()  {
 // next lines are related to state OPENING
 //
 void execEnterStateOPENING()  {
-	if (debugLevel) {
+	logDebug(FSM,#);
+/* 	if (debugLevel) {
 		strcpy(message, "Eintritt execEnterStateOPENING");
 		logFSM();
 	}
-
+ */
 	state = OPENING;
 	Serial.println(F("****************************************************************************************"));
 	Serial.println(F("Status: OPENING  -  Beide Tore werden jetzt geöffnet"));
@@ -408,18 +412,20 @@ void execEnterStateOPENING()  {
 	startMotor_R(PWM_Motor_R, OpenDoor);						// rechten MOTOR starten
 	initializeFlashLightNewState(state);						// Warnlampe auf den neuen Status einstellen
 
-	if (debugLevel) {
+/* 	if (debugLevel) {
 		strcpy(message, "Ende execEnterStateOPENING");
 		logFSM();
 	}
-}
+ */
+ }
 
 void execExitStateOPENING()  {
-	if (debugLevel) {
+	logDebug(FSM,#);
+/* 	if (debugLevel) {
 		strcpy(message, "Begin execExitStateOPENING");
 		logFSM();
 	}
-	Serial.println(F("****************************************************************************************"));
+ */	Serial.println(F("****************************************************************************************"));
 	Serial.println(F("Status: OPENING  -  Beide Tore sind jetzt bis zum Anschlag geöffnet"));
 
 	// wenn das Öffnen von einem anderen Status aufgerufen wurde ....
@@ -429,10 +435,13 @@ void execExitStateOPENING()  {
 	else {
 		execEnterStateIDLE();			// wieder in den Status IDLE zurückkehren	
 	}
-	if (debugLevel) {
+/* 	if (debugLevel) {
 		strcpy(message, "Ende execExitStateOPENING");
 		logFSM();
 	}
+
+ */
+	logDebug(FSM,#);
 }
 
 
@@ -503,8 +512,10 @@ take selected test programm and move FSM into related state
 
 
 void returnToParentStatus() {			// vom Sub-Status in den Parent-Status zurück wechseln	
+	logDebug(FSM,#);
 	state = isCalledBy;					// ab jetzt wieder den Parent-Status ausführen lassen 
-	isCalledBy = 0;
+//	isCalledBy = 0;						// IMPORTANT: it's parent's task to clear this
+										// state = isCalledBy is indicator for parent that itself did call something in the past 
 /*
 	switch (state) {					// jetzt zum Parent status zurückspringen
 		 case PHASE1_TESTING:
@@ -537,6 +548,9 @@ void returnToParentStatus() {			// vom Sub-Status in den Parent-Status zurück w
 	check if any timer expired and take proper actions
 */
 void handleTimerEvents() {
+//	logDebug(FSM,#);
+//	logDebug(TIMER,#);
+//	logDebug(MOTOR,#);
 	// prüfen, ob der Arbeitsmodus bzw. der Zustand der Signallampe akualisiert werden muss
 	if (IsFlashLightActive && (timestamp >= nextTimerFlashEvent)) {
 		toggleFlashLight(IsFlashLightOn);
@@ -557,24 +571,21 @@ void handleTimerEvents() {
 
 	// prüfen, ob beim Öffnen oder Schließen jetzt der zweite Motoren gestartet werden muss
 	if (nextTimer_GatesDelay_Event > 0 && timestamp >= nextTimer_GatesDelay_Event) {		// 
+//		logDebug(FSM,#);
 		switch (state) {
-		OPENING:
+		case OPENING:
+			logDebug(FSM,#);
 			startMotor_L(PWM_Motor_L, OpenDoor);		// beim Öffnen den linken Motor verzögert starten
-			if (debugLevel) {
-				strcpy(message, "debug: linker Motor verzögert gestartet");
-				logMessage();
-			}
 		break;
-		CLOSING;
+		case CLOSING:
+			logDebug(FSM,#);
 			startMotor_R(PWM_Motor_R, CloseDoor);		// beim Schließen den rechten Motor verzögert starten
-			if (debugLevel) {
-				strcpy(message, "debug: rechter Motor verzögert gestartet");
-				logMessage();
-			}
 		break;
 		default:
 		break;
 		}
+//		logDebug(TIMER,#);
+//		logDebug(MOTOR,#);
 	}
 }
 

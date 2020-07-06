@@ -45,7 +45,7 @@
  *
  */
 
-// #define DEBUG			// Flag für Logging zum Debuggen
+#define DEBUG			// Flag für Logging zum Debuggen
 
 
 #define	ProgVersion		0.98	// Versionsnummer
@@ -75,15 +75,47 @@
 #define  H_Br_L_En      9 	//H-Brücke Motor Links Enable;	dieser Ausgang erzeugt das PWM-Signal für den linken Motor
 #define  Warnleuchte    13 	//Warnleuchte an
 
-//#define SZ(s) (sizeof(#s))
-//#define __FILENAME__ (sizeof("Hallo"))
-//#define __FILENAME__ (__FILE__ + SOURCE_PATH_SIZE)
+/* 
+	Important notes:
+	- in case if an if() statement the opening curly bracket HAS TO BE the next character after if's closing parenthese
+	- a parameter that is intended to be used as a string inside the macro the'#' stringify operator: use #msg instead of msg 
+	- #define PrintExpr(x) (printf("%s = %d\n", #x, (x)))
+ */
+ 
+ 
+#ifdef DEBUG
+	#define logDebug(Mlog,Mmsg) 				\
+		if( debugLevel > 0) {					\
+			strcpy(message,__FILE__);			\
+			size_t i2 = sizeof(message);		\
+			while (message[i2] != '\\') i2--;	\
+			strcpy(message,&message[i2+1]);  	\
+			Serial.print (millis());			\
+			Serial.print(F(": debug: "));		\
+			Serial.print(message);				\
+			Serial.print(F(", function:"));		\
+			Serial.print(__FUNCTION__);			\
+			Serial.print(F(", line:"));			\
+			Serial.print(__LINE__);				\
+			if (#Mlog == "FSM"){				\
+				logFSM();						\
+			}									\
+			else if (#Mlog == "MOTOR"){			\
+				logMOTOR();						\
+			}									\
+			else if (#Mlog == "TIMER"){			\
+				logTIMER();						\
+			}									\
+			Serial.print(F("; "));				\
+			Serial.println(#Mmsg);				\
+		}										\
+		else Serial.println("Debug deaktiviert"); 	
+		
+#else
+	// this is just a placeholder (doing nothing) to make sure the call still is valid
+	#define logDebug(Mlogtype, Mmsg) 
+#endif
 
-//#define logDebug(d,m) ( d > 0 ? Serial.print(#m): Serial.print("Debug deaktiviert"))
-//#define logDebug(m) ( debugLevel > 0 ? Serial.println(__FILE__, __LINE__, #m): Serial.println("Debug deaktiviert"))
-//Works - #define logDebug(m) ( debugLevel > 0 ? Serial.println(__FILE__): Serial.println("Debug deaktiviert"))
-//#define logDebug(m) ( debugLevel > 0 ? 	Serial.print(__FILE__ #m): Serial.println("Debug deaktiviert"))
-//#define logDebug(m) ( debugLevel > 0 ? printf(message,__FILE__): Serial.println("Debug deaktiviert"))
 
 
 // Steuerungs-Flags
@@ -138,7 +170,7 @@ unsigned long	nextTimer_Motor_R_Event;		// Variable, die den Zeitpunkt für das 
 unsigned long	nextTimer_Motor_L_Event;		// Variable, die den Zeitpunkt für das nächste Schalten der Motoren enthält
 unsigned long	nextTimer_GatesDelay_Event = 0;	// Variable für den Zeitpunkt, an dem beim Öffnen bzw. Schließen das zweite Tor gestartet 
 unsigned long	timestamp;						// Variable, die den aktuellen Zeitpunkt für weitere Berechnung zwischenspeichert
-const unsigned long	GatesDelay = 6000;			// Verzögerung in ms, mit der die Tore beim Öffnen/Schließen gestartet werden
+const unsigned long	GatesDelay = 2000;			// Verzögerung in ms, mit der die Tore beim Öffnen/Schließen nacheinander gestartet werden
 
 
 //PWM Duty Cycle and motor control variables
@@ -172,6 +204,10 @@ test_progs activeTestProgramm;				// ausgewähltes Testprogramm
 boolean bootInitDone = false;				// keep track if device was  
 
 byte debugLevel = 0;						// debug Level
+enum debugScopes {	FMS, 		// 0
+					MOTOR		// 1
+			};
+
 char message[101];							// Puffer für log Meldungen
 // two operation modes: normal usage or test/debugging
 enum opModes {	NORMAL, 		// 0
